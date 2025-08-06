@@ -1,4 +1,5 @@
 /** @type {import('next').NextConfig} */
+// eslint-disable-next-line @typescript-eslint/no-var-requires
 const withBundleAnalyzer = require('@next/bundle-analyzer')({
   enabled: process.env.ANALYZE === 'true',
 });
@@ -34,13 +35,10 @@ const nextConfig = {
         pathname: "/**",
       },
     ],
-    // You can remove the domains array if you use remotePatterns
-    // domains: ['localhost'],
+    
     formats: ['image/avif', 'image/webp'],
   },
-  env: {
-   /*  NEXT_PUBLIC_API_BASE_URL: "http://localhost:7000/api", */
-  },
+
   async redirects() {
     return [
       {

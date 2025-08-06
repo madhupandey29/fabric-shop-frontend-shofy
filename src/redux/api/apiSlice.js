@@ -26,7 +26,6 @@ export const apiSlice = createApi({
             headers.set("Authorization", `Bearer ${user.accessToken}`);
           }
         } catch (error) {
-          console.error('Error parsing user info:', error);
           Cookies.remove('userInfo');
         }
       }
@@ -40,8 +39,8 @@ export const apiSlice = createApi({
         url: endpoint,
         method: 'GET'
       }),
-      providesTags: (result = [], error, endpoint) => {
-        const tagMap = {
+      providesTags: (_, __, endpoint) => { 
+         const tagMap = {
           '/category/': 'Category',
           '/color/': 'Color',
           '/content/': 'Content',

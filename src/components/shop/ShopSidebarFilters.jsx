@@ -2,54 +2,46 @@ import React, { useState, useEffect } from 'react';
 import { useGetFilterOptionsQuery } from '@/redux/api/apiSlice';
 
 /* -------------------------------------------------------------------------- */
-/*  CONSTANTS & HELPERS                                                       */
+/*  COLLECTIONS THAT MATCH THE PRODUCT SCHEMA                                 */
 /* -------------------------------------------------------------------------- */
 const FILTERS = [
-  { key: 'category',     label: 'Category',     api: 'category/' },
-  { key: 'color',        label: 'Color',        api: 'color/'    },
-  { key: 'content',      label: 'Content',      api: 'content/'  },
-  { key: 'design',       label: 'Design',       api: 'design/'   },
-  {
-    key: 'structure',    label: 'Structure',    api: 'structure/',
-    sub: { key: 'substructure', label: 'Substructure', api: 'substructure/' }
-  },
-  {
-    key: 'finish',       label: 'Finish',       api: 'finish/',
-    sub: { key: 'subfinish', label: 'Sub Finish', api: 'subfinish/' }
-  },
-  { key: 'groupcode',    label: 'Group Code',   api: 'groupcode/' },
-  { key: 'vendor',       label: 'Vendor',       api: 'vendor/'    },
-  {
-    key: 'suitablefor',  label: 'Suitable For', api: 'suitablefor/',
-    sub: { key: 'subsuitable', label: 'Sub Suitable', api: 'subsuitable/' }
-  },
-  { key: 'motifsize',    label: 'Motif Size',   api: 'motif/'     }
+  { key: 'category',     label: 'Category',     api: 'category/'      },
+  { key: 'color',        label: 'Color',        api: 'color/'         },
+  { key: 'content',      label: 'Content',      api: 'content/'       },
+  { key: 'design',       label: 'Design',       api: 'design/'        },
+
+  /* products hold substructure / subfinish / subsuitable  */
+  { key: 'structure',    label: 'Structure',    api: 'substructure/',
+    sub: { key: 'substructure', label: 'Sub-structure', api: 'substructure/' }},
+
+  { key: 'finish',       label: 'Finish',       api: 'subfinish/',
+    sub: { key: 'subfinish', label: 'Sub-finish', api: 'subfinish/' }},
+
+  { key: 'groupcode',    label: 'Group Code',   api: 'groupcode/'     },
+  { key: 'vendor',       label: 'Vendor',       api: 'vendor/'        },
+
+  { key: 'suitablefor',  label: 'Suitable For', api: 'subsuitable/',
+    sub: { key: 'subsuitable', label: 'Sub-suitable', api: 'subsuitable/' }},
+
+  { key: 'motifsize',    label: 'Motif Size',   api: 'motif/'         },
 ];
 
-const getOptions = (data = []) =>
-  Array.isArray(data)
-    ? data
-    : data?.data        ?? // common “data” envelope
-      data?.results     ?? // RTK/Strapi style
-      [];
+/* fallback helper */
+const getOptions = (d = []) =>
+  Array.isArray(d) ? d : d?.data ?? d?.results ?? [];
 
 /* -------------------------------------------------------------------------- */
-/*  PARENT COMPONENT                                                          */
-/* -------------------------------------------------------------------------- */
+
 const ShopSidebarFilters = ({ onFilterChange, selected = {} }) => {
-  const [openKey, setOpenKey] = useState(null);
-  const [expandedSub, setExpandedSub] = useState({});
+  const [open, setOpen]       = useState(null);
+  const [openSub, setOpenSub] = useState({});
 
-  const toggleAccordion   = key            => setOpenKey(k => (k === key ? null : key));
-  const toggleSubAccordion = (pKey, sKey)  =>
-    setExpandedSub(prev => ({ ...prev, [pKey]: prev[pKey] === sKey ? null : sKey }));
+  const toggle = key      => setOpen(k => (k === key ? null : key));
+  const toggleSub = (p,s) => setOpenSub(o => ({ ...o, [p]: o[p] === s ? null : s }));
 
-  const handleCheckbox = (filterKey, value) => {
-    const current = selected[filterKey] ?? [];
-    const next    = current.includes(value)
-      ? current.filter(v => v !== value)
-      : [...current, value];
-
+  const handleTick = (filterKey, value) => {
+    const cur  = selected[filterKey] ?? [];
+    const next = cur.includes(value) ? cur.filter(v => v !== value) : [...cur, value];
     onFilterChange({ ...selected, [filterKey]: next });
   };
 
@@ -58,16 +50,16 @@ const ShopSidebarFilters = ({ onFilterChange, selected = {} }) => {
       <h3 className="tp-shop-widget-title">Filter</h3>
 
       <div className="tp-shop-widget-content">
-        {FILTERS.map(filter => (
+        {FILTERS.map(f => (
           <FilterSection
-            key={filter.key}
-            filter={filter}
-            isOpen={openKey === filter.key}
-            expandedSub={expandedSub[filter.key]}
+            key={f.key}
+            filter={f}
+            isOpen={open === f.key}
+            expandedSub={openSub[f.key]}
             selected={selected}
-            onToggle={() => toggleAccordion(filter.key)}
-            onToggleSub={() => toggleSubAccordion(filter.key, filter.sub?.key)}
-            onCheckbox={handleCheckbox}
+            onToggle={() => toggle(f.key)}
+            onToggleSub={() => toggleSub(f.key, f.sub?.key)}
+            onCheckbox={handleTick}
           />
         ))}
       </div>
@@ -75,79 +67,54 @@ const ShopSidebarFilters = ({ onFilterChange, selected = {} }) => {
   );
 };
 
-/* -------------------------------------------------------------------------- */
-/*  CHILD COMPONENT – ONE PER FILTER                                          */
-/* -------------------------------------------------------------------------- */
+/* one filter section ------------------------------------------------------- */
 const FilterSection = ({
-  filter,
-  isOpen,
-  expandedSub,
-  selected,
-  onToggle,
-  onToggleSub,
-  onCheckbox
+  filter, isOpen, expandedSub, selected,
+  onToggle, onToggleSub, onCheckbox,
 }) => {
-  const {
-    data: response,
-    isLoading,
-    error,
-  } = useGetFilterOptionsQuery(filter.api, {
-    skip: !isOpen && !expandedSub
+  const { data, isLoading, error } = useGetFilterOptionsQuery(filter.api, {
+    skip: !isOpen && !expandedSub,
   });
+  const options = getOptions(data);
 
-  const options = getOptions(response);
-
-  /* optional debug */
   useEffect(() => {
-    if (error)   console.error(`Error fetching ${filter.key}:`, error);
-    if (response) console.log(`Fetched ${filter.key}:`, response);
-  }, [error, response, filter.key]);
+  }, [error, filter.key]);
 
   return (
     <div className="tp-shop-widget mb-30">
-      {/* ── Main accordion header ── */}
       <div
         className="tp-shop-widget-title no-border d-flex justify-content-between align-items-center"
         style={{ cursor: 'pointer' }}
         onClick={onToggle}
       >
-        <span>{filter.label}</span>
-        <span>{isOpen ? '−' : '+'}</span>
+        <span>{filter.label}</span> <span>{isOpen ? '−' : '+'}</span>
       </div>
 
-      {/* ── Main accordion body ── */}
       {isOpen && (
         <div className="tp-shop-widget-options mt-2">
-          <div className="d-flex flex-column">
-            {isLoading && <div className="text-muted small">Loading…</div>}
-            {error      && <div className="text-danger small">Error loading options</div>}
-            {!isLoading && !error && options.length === 0 && (
-              <div className="text-muted small">No options available</div>
-            )}
+          {isLoading && <div className="small text-muted">Loading…</div>}
+          {error && <div className="small text-danger">Error loading</div>}
+          {!isLoading && !error && !options.length && (
+            <div className="small text-muted">No options</div>
+          )}
 
-            {!isLoading && !error && options.map(opt => {
-              const value = opt._id ?? opt.id ?? opt.name;
-              return (
-                <label
-                  key={value}
-                  className="d-flex align-items-center mb-2"
-                >
-                  <input
-                    type="checkbox"
-                    className="me-2"
-                    name={filter.key}
-                    checked={(selected[filter.key] ?? []).includes(value)}
-                    onChange={() => onCheckbox(filter.key, value)}
-                  />
-                  <span>{opt.name ?? opt.parent ?? opt.title}</span>
-                </label>
-              );
-            })}
-          </div>
+          {!isLoading && !error && options.map(o => {
+            const value = o._id ?? o.id ?? o.name;
+            return (
+              <label key={value} className="d-flex align-items-center mb-2">
+                <input
+                  type="checkbox"
+                  className="me-2"
+                  checked={(selected[filter.key] ?? []).includes(value)}
+                  onChange={() => onCheckbox(filter.key, value)}
+                />
+                <span>{o.name ?? o.parent ?? o.title}</span>
+              </label>
+            );
+          })}
 
-          {/* ── Optional sub-filter ── */}
           {filter.sub && (
-            <div className="tp-shop-widget-subfilter mt-3">
+            <div className="mt-3">
               <div
                 className="tp-shop-widget-title no-border d-flex justify-content-between align-items-center"
                 style={{ cursor: 'pointer', fontSize: '0.95em' }}
@@ -173,35 +140,29 @@ const FilterSection = ({
   );
 };
 
-/* -------------------------------------------------------------------------- */
-/*  REUSABLE SUB-FILTER COMPONENT                                             */
-/* -------------------------------------------------------------------------- */
+/* sub-filter --------------------------------------------------------------- */
 const SubFilter = ({ api, filterKey, selected, onSelect }) => {
   const { data, isLoading, error } = useGetFilterOptionsQuery(api);
   const options = getOptions(data);
 
-  if (isLoading)   return <div className="text-muted small ps-3">Loading sub-options…</div>;
-  if (error)       return <div className="text-danger small ps-3">Error loading sub-options</div>;
+  if (isLoading) return <div className="small text-muted ps-3">Loading…</div>;
+  if (error)     return <div className="small text-danger ps-3">Error</div>;
   if (!options.length)
-                   return <div className="text-muted small ps-3">No sub-options available</div>;
+                 return <div className="small text-muted ps-3">No options</div>;
 
   return (
     <div className="ps-3 mt-2">
-      {options.map(opt => {
-        const value = opt._id ?? opt.id ?? opt.name;
+      {options.map(o => {
+        const value = o._id ?? o.id ?? o.name;
         return (
-          <label
-            key={value}
-            className="d-flex align-items-center mb-2"
-          >
+          <label key={value} className="d-flex align-items-center mb-2">
             <input
               type="checkbox"
               className="me-2"
-              name={filterKey}
               checked={selected.includes(value)}
               onChange={() => onSelect(filterKey, value)}
             />
-            <span>{opt.name ?? opt.parent ?? opt.title}</span>
+            <span>{o.name ?? o.parent ?? o.title}</span>
           </label>
         );
       })}

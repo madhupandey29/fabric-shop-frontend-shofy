@@ -91,7 +91,6 @@ const ShopListItem = ({ product }) => {
       
       return '/assets/img/product/default-product-img.jpg';
     } catch (error) {
-      console.error('Error processing image URL:', error);
       return '/assets/img/product/default-product-img.jpg';
     }
   };

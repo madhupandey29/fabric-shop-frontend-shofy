@@ -1,17 +1,33 @@
 'use client';
-import React from "react";
-// const PrdDetailsLoader = ... // Commented out because it is defined but never used
-import ErrorMsg from "../common/error-msg";
-import ProductDetailsBreadcrumb from "../breadcrumb/product-details-breadcrumb";
-import ProductDetailsContent from "./product-details-content";
+import React from 'react';
 
+import ErrorMsg                     from '../common/error-msg';
+import ProductDetailsBreadcrumb     from '../breadcrumb/product-details-breadcrumb';
+import ProductDetailsContent        from './product-details-content';
+
+import { useGetCategoryByIdQuery }  from '@/redux/features/categoryApi';
+
+/* -------------------------------------------------------------------- */
+/*  ProductDetailsArea                                                  */
+/* -------------------------------------------------------------------- */
 const ProductDetailsArea = ({ product }) => {
-  if (!product) {
-    return <ErrorMsg msg="No product found!" />;
-  }
+  /* always run the hook; let RTK Query decide whether to fire */
+  const categoryId = product?.categoryId;
+  const { data: catData } = useGetCategoryByIdQuery(categoryId, {
+    skip: !categoryId,          //   ← no network call when ID is missing
+  });
+
+  /* handle missing product after hooks have run */
+  if (!product) return <ErrorMsg msg="No product found!" />;
+
+  const categoryName = catData?.data?.name || '';
+
   return (
     <>
-      <ProductDetailsBreadcrumb category={product.category.name} title={product.title} />
+      <ProductDetailsBreadcrumb
+        category={categoryName}
+        title={product.title}
+      />
       <ProductDetailsContent productItem={product} />
     </>
   );

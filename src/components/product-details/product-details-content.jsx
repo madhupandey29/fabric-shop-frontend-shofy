@@ -1,32 +1,36 @@
 'use client';
-import React, { useState, useEffect } from "react";
-import DetailsThumbWrapper from "./details-thumb-wrapper";
-import DetailsWrapper from "./details-wrapper";
-import DetailsTabNav from "./details-tab-nav";
-import RelatedProducts from "./related-products";
-import { useGetSeoByProductQuery } from "@/redux/features/seoApi";
 
-const ProductDetailsContent = ({ productItem }) => {
-  const { _id, img, imageURLs, videoId, status, groupcodeId } = productItem || {};
+import React, { useState, useEffect } from 'react';
+
+import DetailsThumbWrapper from './details-thumb-wrapper';
+import DetailsWrapper      from './details-wrapper';
+import DetailsTabNav       from './details-tab-nav';
+import RelatedProducts     from './related-products';
+
+import { useGetSeoByProductQuery } from '@/redux/features/seoApi';
+
+
+export default function ProductDetailsContent({ productItem }) {
+  const { _id, img, imageURLs, videoId, status, groupcodeId } = productItem ?? {};
+
   const [activeImg, setActiveImg] = useState(img);
-  // active image change when img change
-  useEffect(() => {
-    setActiveImg(img);
-  }, [img]);
+  useEffect(() => { setActiveImg(img); }, [img]);
 
-  // handle image active
-  const handleImageActive = (item) => {
-    setActiveImg(item.img);
+  const handleImageActive = (item) => setActiveImg(item.img);
+
+  const {
+    data:    seoPayload,
+    isLoading: seoLoading,
+    isError:   seoError,
+  } = useGetSeoByProductQuery(_id, { skip: !_id });
+
+  const seoData = seoPayload?.data ?? null;
+
+  const SeoStatus = () => {
+    if (seoLoading) return <span className="text-muted small">Loading SEO…</span>;
+    if (seoError)   return null;              
+    return null;                              
   };
-  // Fetch SEO data for the product
-  const { data: seoData, isLoading, isError } = useGetSeoByProductQuery(_id, {
-    skip: !_id,
-  });
-
-  console.log('SEO Data from API:', seoData);
-  console.log('Product ID:', _id);
-  console.log('Is Loading:', isLoading);
-  console.log('Is Error:', isError);
 
   return (
     <section className="tp-product-details-area">
@@ -34,7 +38,6 @@ const ProductDetailsContent = ({ productItem }) => {
         <div className="container">
           <div className="row">
             <div className="col-xl-7 col-lg-6">
-              {/* product-details-thumb-wrapper start */}
               <DetailsThumbWrapper
                 activeImg={activeImg}
                 handleImageActive={handleImageActive}
@@ -44,41 +47,37 @@ const ProductDetailsContent = ({ productItem }) => {
                 videoId={videoId}
                 status={status}
               />
-              {/* product-details-thumb-wrapper end */}
             </div>
+
             <div className="col-xl-5 col-lg-6">
-              {/* product-details-wrapper start */}
               <DetailsWrapper
                 productItem={productItem}
                 handleImageActive={handleImageActive}
                 activeImg={activeImg}
-                detailsBottom={true}
+                detailsBottom
               />
-              {/* product-details-wrapper end */}
+              <SeoStatus />
             </div>
           </div>
         </div>
       </div>
 
-      {/* product details description */}
       <div className="tp-product-details-bottom pb-140">
         <div className="container">
           <div className="row">
             <div className="col-xl-12">
-              <DetailsTabNav product={productItem} seoData={seoData?.data} />
+              <DetailsTabNav product={productItem} seoData={seoData} />
             </div>
           </div>
         </div>
       </div>
-      {/* product details description */}
 
-      {/* related products start */}
       <section className="tp-related-product pt-95 pb-50">
         <div className="container">
           <div className="row">
             <div className="tp-section-title-wrapper-6 text-center mb-40">
               <span className="tp-section-title-pre-6">Style it with</span>
-              <h3 className="tp-section-title-6">Mix & Match</h3>
+              <h3 className="tp-section-title-6">Mix &amp; Match</h3>
             </div>
           </div>
           <div className="row">
@@ -86,9 +85,6 @@ const ProductDetailsContent = ({ productItem }) => {
           </div>
         </div>
       </section>
-      {/* related products end */}
     </section>
   );
-};
-
-export default ProductDetailsContent;
+}
