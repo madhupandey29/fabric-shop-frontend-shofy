@@ -125,19 +125,19 @@ const ProductItem = ({ product }) => {
       </div>
       <div className="tp-product-content-2 pt-15">
         <div className="tp-product-tag-2">
-          <a href="#">{product.CategoryId?.name || 'Unknown Category'}</a>
+          <a href="#">{product.category.name || 'Unknown Category'}</a>
         </div>
         <h3 className="tp-product-title-2">
           <Link href={`/fabric/${slug}`}>{product.name}</Link>
         </h3>
-        <div className="tp-product-price-wrapper-2">
+        {/* <div className="tp-product-price-wrapper-2">
           <span className="tp-product-price-2 new-price">${product.salesPrice}</span>
           {product.purchasePrice > product.salesPrice && (
             <span className="tp-product-price-2 old-price">
               ${product.purchasePrice}
             </span>
           )}
-        </div>
+        </div> */}
       </div>
     </div>
   );

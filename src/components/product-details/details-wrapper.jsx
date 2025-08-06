@@ -49,14 +49,14 @@ const FinishInfo = ({ id }) => {
 const DetailsWrapper = ({ productItem = {} }) => {
   const {
     _id,
-    sku,
+    /* sku, */
     title,
     category,
     newCategoryId,
     description,
     status,
-    price = 0,
-    discount = 0,
+   /*  price = 0,
+    discount = 0, */
 
     structureId,     
     contentId,
@@ -85,10 +85,10 @@ const DetailsWrapper = ({ productItem = {} }) => {
         </div>
       </div>
 
-      <p>{description}</p>
+      <p>Description: {description}</p>
 
      
-      <div className="tp-product-details-price-wrapper mb-20">
+     {/*  <div className="tp-product-details-price-wrapper mb-20">
         {discount > 0 ? (
           <>
             <span className="tp-product-details-price old-price">
@@ -103,13 +103,13 @@ const DetailsWrapper = ({ productItem = {} }) => {
             {price.toFixed(2)}
           </span>
         )}
-      </div>
+      </div> */}
 
      
       <div className="tp-product-details-query" style={{ marginBottom: 20 }}>
         <div className="tp-product-details-query-item d-flex align-items-center">
-          <span>SKU: </span><p>{sku}</p>
-        </div>
+{/*           <span>SKU:  </span><p>{sku}</p>
+ */}        </div>
 
         <StructureInfo id={structureId} />
         <ContentInfo   id={contentId}   />
