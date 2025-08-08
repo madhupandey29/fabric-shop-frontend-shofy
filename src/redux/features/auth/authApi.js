@@ -1,3 +1,4 @@
+// src/redux/features/auth/authApi.js
 import { apiSlice } from "@/redux/api/apiSlice";
 import { userLoggedIn } from "./authSlice";
 import Cookies from "js-cookie";
@@ -5,187 +6,133 @@ import Cookies from "js-cookie";
 export const authApi = apiSlice.injectEndpoints({
   overrideExisting: true,
   endpoints: (builder) => ({
-    registerUser: builder.mutation({
+    // ─── Registration ──────────────────────────
+    sendRegistrationOTP: builder.mutation({
       query: (data) => ({
-        url: `${process.env.NEXT_PUBLIC_API_BASE_URL}/user/signup`,
+        url: "users/send-otp",
         method: "POST",
+        credentials: "include",
         body: data,
       }),
     }),
-    // signUpProvider
-    signUpProvider: builder.mutation({
-      query: (token) => ({
-        url: `${process.env.NEXT_PUBLIC_API_BASE_URL}/user/register/${token}`,
+    verifyOTPAndRegister: builder.mutation({
+      query: ({ email, otp }) => ({
+        url: "users/verify-otp",
         method: "POST",
+        credentials: "include",
+        body: { email, otp },
       }),
-
-      async onQueryStarted(arg, { queryFulfilled, dispatch }) {
+      async onQueryStarted(arg, { queryFulfilled }) {
         try {
-          const result = await queryFulfilled;
-
-          Cookies.set(
-            "userInfo",
-            JSON.stringify({
-              accessToken: result.data.data.token,
-              user: result.data.data.user,
-            }),
-            { expires: 0.5 }
-          );
-
-          dispatch(
-            userLoggedIn({
-              accessToken: result.data.data.token,
-              user: result.data.data.user,
-            })
-          );
+          await queryFulfilled;
         } catch (err) {
-          // do nothing
+          console.error("verifyOTPAndRegister error:", err);
         }
       },
     }),
-    // login
+
+    // ─── Login / Session ───────────────────────
     loginUser: builder.mutation({
-      query: (data) => ({
-        url: `${process.env.NEXT_PUBLIC_API_BASE_URL}/user/login`,
+      query: ({ identifier, password }) => ({
+        url: "users/login",
         method: "POST",
-        body: data,
+        credentials: "include",
+        body: { identifier, password },
       }),
-
       async onQueryStarted(arg, { queryFulfilled, dispatch }) {
         try {
-          const result = await queryFulfilled;
-
+          const { data } = await queryFulfilled;
           Cookies.set(
             "userInfo",
-            JSON.stringify({
-              accessToken: result.data.data.token,
-              user: result.data.data.user,
-            }),
+            JSON.stringify({ user: data.user }),
             { expires: 0.5 }
           );
-
-          dispatch(
-            userLoggedIn({
-              accessToken: result.data.data.token,
-              user: result.data.data.user,
-            })
-          );
+          dispatch(userLoggedIn({ accessToken: data.token, user: data.user }));
         } catch (err) {
-          // do nothing
+          console.error("loginUser error:", err);
         }
       },
     }),
-    // get me
-    getUser: builder.query({
-      query: () => `${process.env.NEXT_PUBLIC_API_BASE_URL}/user/me`,
-
-      async onQueryStarted(arg, { queryFulfilled, dispatch }) {
-        try {
-          const result = await queryFulfilled;
-          dispatch(
-            userLoggedIn({
-              user: result.data,
-            })
-          );
-        } catch (err) {
-          // do nothing
-        }
-      },
+    requestLoginOTP: builder.mutation({
+      query: ({ email }) => ({
+        url: "users/login/otp/request",
+        method: "POST",
+        credentials: "include",
+        body: { email },
+      }),
     }),
-    // confirmEmail
-    confirmEmail: builder.query({
-      query: (token) => `${process.env.NEXT_PUBLIC_API_BASE_URL}/user/confirmEmail/${token}`,
-
+    verifyLoginOTP: builder.mutation({
+      query: ({ email, otp }) => ({
+        url: "users/login/otp/verify",
+        method: "POST",
+        credentials: "include",
+        body: { email, otp },
+      }),
       async onQueryStarted(arg, { queryFulfilled, dispatch }) {
         try {
-          const result = await queryFulfilled;
-
+          const { data } = await queryFulfilled;
           Cookies.set(
             "userInfo",
-            JSON.stringify({
-              accessToken: result.data.data.token,
-              user: result.data.data.user,
-            }),
+            JSON.stringify({ user: data.user }),
             { expires: 0.5 }
           );
-
-          dispatch(
-            userLoggedIn({
-              accessToken: result.data.data.token,
-              user: result.data.data.user,
-            })
-          );
+          dispatch(userLoggedIn({ accessToken: data.token, user: data.user }));
         } catch (err) {
-          // do nothing
+          console.error("verifyLoginOTP error:", err);
         }
       },
     }),
-    // reset password
-    resetPassword: builder.mutation({
-      query: (data) => ({
-        url: `${process.env.NEXT_PUBLIC_API_BASE_URL}/user/forget-password`,
-        method: "PATCH",
-        body: data,
+    getSessionInfo: builder.query({
+      query: ({ userId }) => ({
+        url: `users/${userId}/session`,
+        credentials: "include",
+      }),
+      async onQueryStarted(arg, { queryFulfilled, dispatch }) {
+        try {
+          const { data } = await queryFulfilled;
+          dispatch(userLoggedIn({ user: data.session.user }));
+        } catch (err) {
+          console.error("getSessionInfo error:", err);
+        }
+      },
+    }),
+    logoutUser: builder.mutation({
+      query: ({ userId }) => ({
+        url: `users/logout/${userId}`,
+        method: "POST",
+        credentials: "include",
       }),
     }),
-    // confirmForgotPassword
-    confirmForgotPassword: builder.mutation({
-      query: (data) => ({
-        url: `${process.env.NEXT_PUBLIC_API_BASE_URL}/user/confirm-forget-password`,
-        method: "PATCH",
-        body: data,
-      }),
-    }),
-    // change password
-    changePassword: builder.mutation({
-      query: (data) => ({
-        url: `${process.env.NEXT_PUBLIC_API_BASE_URL}/user/change-password`,
-        method: "PATCH",
-        body: data,
-      }),
-    }),
-    // updateProfile password
+
+    // ─── **NEW**: Update Profile ───────────────
     updateProfile: builder.mutation({
       query: ({ id, ...data }) => ({
-        url: `${process.env.NEXT_PUBLIC_API_BASE_URL}/user/update-user/${id}`,
+        url: `users/${id}`,          // matches your GET /:userId route for update
         method: "PUT",
+        credentials: "include",
         body: data,
       }),
-
       async onQueryStarted(arg, { queryFulfilled, dispatch }) {
         try {
-          const result = await queryFulfilled;
-
-          Cookies.set(
-            "userInfo",
-            JSON.stringify({
-              accessToken: result.data.data.token,
-              user: result.data.data.user,
-            }),
-            { expires: 0.5 }
-          );
-
-          dispatch(
-            userLoggedIn({
-              accessToken: result.data.data.token,
-              user: result.data.data.user,
-            })
-          );
+          const { data } = await queryFulfilled;
+          // Optionally update auth state if backend returns updated user
+          dispatch(userLoggedIn({ user: data }));
         } catch (err) {
-          // do nothing
+          console.error("updateProfile error:", err);
         }
       },
     }),
   }),
 });
 
+// Export hooks for all endpoints, including the new updateProfile
 export const {
+  useSendRegistrationOTPMutation,
+  useVerifyOTPAndRegisterMutation,
   useLoginUserMutation,
-  useRegisterUserMutation,
-  useConfirmEmailQuery,
-  useResetPasswordMutation,
-  useConfirmForgotPasswordMutation,
-  useChangePasswordMutation,
-  useUpdateProfileMutation,
-  useSignUpProviderMutation,
+  useRequestLoginOTPMutation,
+  useVerifyLoginOTPMutation,
+  useGetSessionInfoQuery,
+  useLogoutUserMutation,
+  useUpdateProfileMutation,     // ← now available!
 } = authApi;

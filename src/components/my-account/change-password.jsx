@@ -1,12 +1,14 @@
+// src/components/my-account/change-password.jsx
+'use client';
 import React from "react";
 import { yupResolver } from "@hookform/resolvers/yup";
 import { useForm } from "react-hook-form";
 import { useSelector } from "react-redux";
 import * as Yup from "yup";
+
 // internal
 import ErrorMsg from "../common/error-msg";
-import { useChangePasswordMutation } from "@/redux/features/auth/authApi";
-import { notifyError, notifySuccess } from "@/utils/toast";
+// import { useChangePasswordMutation } from "@/redux/features/auth/authApi"; // ← comment out until hook exists
 
 // schema
 const schema = Yup.object().shape({
@@ -17,7 +19,7 @@ const schema = Yup.object().shape({
     "Passwords must match"
   ),
 });
-// schemaTwo
+// schemaTwo for Google users
 const schemaTwo = Yup.object().shape({
   newPassword: Yup.string().required().min(6).label("New Password"),
   confirmPassword: Yup.string().oneOf(
@@ -26,11 +28,12 @@ const schemaTwo = Yup.object().shape({
   ),
 });
 
-const ChangePassword = () => {
+export default function ChangePassword() {
   const { user } = useSelector((state) => state.auth);
-  // eslint-disable-next-line no-empty-pattern
-  const [changePassword, {}] = useChangePasswordMutation();
-  // react hook form
+
+  // Commented out until you add the endpoint & hook:
+  // const [changePassword, {}] = useChangePasswordMutation();
+
   const {
     register,
     handleSubmit,
@@ -40,8 +43,9 @@ const ChangePassword = () => {
     resolver: yupResolver(user?.googleSignIn ? schemaTwo : schema),
   });
 
-  // on submit
-  const onSubmit = (data) => {
+  const onSubmit = () => {
+    // Temporarily disable actual API call:
+    /*
     changePassword({
       email: user?.email,
       password: data.password,
@@ -54,8 +58,10 @@ const ChangePassword = () => {
         notifySuccess(result?.data?.message);
       }
     });
+    */
     reset();
   };
+
   return (
     <div className="profile__password">
       <form onSubmit={handleSubmit(onSubmit)}>
@@ -125,6 +131,4 @@ const ChangePassword = () => {
       </form>
     </div>
   );
-};
-
-export default ChangePassword;
+}

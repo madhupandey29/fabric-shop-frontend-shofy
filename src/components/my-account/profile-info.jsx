@@ -1,123 +1,88 @@
+'use client';
 import React from 'react';
-import { yupResolver } from "@hookform/resolvers/yup";
-import { useForm } from "react-hook-form";
-import { useSelector } from "react-redux";
-import * as Yup from "yup";
+import { yupResolver } from '@hookform/resolvers/yup';
+import { useForm }      from 'react-hook-form';
+import { useSelector }  from 'react-redux';
+import * as Yup         from 'yup';
+
 // internal
-import ErrorMsg from '../common/error-msg';
-import { EmailTwo, LocationTwo, PhoneThree, UserThree } from '@/svg';
+import ErrorMsg                 from '../common/error-msg';
 import { useUpdateProfileMutation } from '@/redux/features/auth/authApi';
 import { notifyError, notifySuccess } from '@/utils/toast';
 
-// yup  schema
+// validation schema
 const schema = Yup.object().shape({
-  name: Yup.string().required().label("Name"),
-  email: Yup.string().required().email().label("Email"),
-  phone: Yup.string().required().min(11).label("Phone"),
-  address: Yup.string().required().label("Address"),
-  bio: Yup.string().required().min(20).label("Bio"),
+  name:    Yup.string().required('Name is required'),
+  email:   Yup.string().required('Email is required').email(),
+  phone:   Yup.string().required('Phone is required').min(10),
+  address: Yup.string().required('Address is required'),
+  bio:     Yup.string().required('Bio is required').min(20),
 });
 
-const ProfileInfo = () => {
-  const { user } = useSelector((state) => state.auth);
+export default function ProfileInfo() {
+  const { user } = useSelector((s) => s.auth);
 
-  // eslint-disable-next-line no-empty-pattern
-  const [updateProfile, {}] = useUpdateProfileMutation();
-  // react hook form
-  const {register,handleSubmit,formState: { errors },reset} = useForm({
-    resolver: yupResolver(schema),
-  });
-  // on submit
+  // Hook must live here, inside this component
+  const [updateProfile, { isLoading, error }] =
+    useUpdateProfileMutation();
+
+  const { register, handleSubmit, formState: { errors }, reset } =
+    useForm({ resolver: yupResolver(schema) });
+
   const onSubmit = (data) => {
-    updateProfile({
-      id:user?._id,
-      name:data.name,
-      email:data.email,
-      phone:data.phone,
-      address:data.address,
-      bio:data.bio,
-    }).then((result) => {
-      if(result?.error){
-        notifyError(result?.error?.data?.message);
-      }
-      else {
-        notifySuccess(result?.data?.message);
-      }
-    })
+    updateProfile({ id: user._id, ...data })
+      .unwrap()
+      .then((res) => notifySuccess(res.message))
+      .catch((err) => notifyError(err.data?.message || err.message));
     reset();
   };
+
   return (
     <div className="profile__info">
-      <h3 className="profile__info-title">Personal Details</h3>
-      <div className="profile__info-content">
-        <form onSubmit={handleSubmit(onSubmit)}>
-          <div className="row">
-            <div className="col-xxl-6 col-md-6">
-              <div className="profile__input-box">
-                <div className="profile__input">
-                  <input {...register("name", { required: `Name is required!` })} name='name' type="text" placeholder="Enter your username" defaultValue={user?.name} />
-                  <span>
-                    <UserThree/>
-                  </span>
-                  <ErrorMsg msg={errors.name?.message} />
-                </div>
-              </div>
-            </div>
+      <h3>Personal Details</h3>
+      {isLoading && <p>Updating…</p>}
+      {error     && <ErrorMsg msg="Update failed" />}
 
-            <div className="col-xxl-6 col-md-6">
-              <div className="profile__input-box">
-                <div className="profile__input">
-                  <input {...register("email", { required: `Email is required!` })} name='email' type="email" placeholder="Enter your email" defaultValue={user?.email} />
-                  <span>
-                    <EmailTwo/>
-                  </span>
-                  <ErrorMsg msg={errors.email?.message} />
-                </div>
-              </div>
-            </div>
+      <form onSubmit={handleSubmit(onSubmit)}>
+        <input
+          {...register('name')}
+          defaultValue={user?.name}
+          placeholder="Your Name"
+        />
+        <ErrorMsg msg={errors.name?.message} />
 
-            <div className="col-xxl-12">
-              <div className="profile__input-box">
-                <div className="profile__input">
-                  <input {...register("phone", { required: true })} name='phone' type="text" placeholder="Enter your number" defaultValue="0123 456 7889" />
-                  <span>
-                    <PhoneThree/>
-                  </span>
-                  <ErrorMsg msg={errors.phone?.message} />
-                </div>
-              </div>
-            </div>
+        <input
+          {...register('email')}
+          defaultValue={user?.email}
+          placeholder="Your Email"
+        />
+        <ErrorMsg msg={errors.email?.message} />
 
-            <div className="col-xxl-12">
-              <div className="profile__input-box">
-                <div className="profile__input">
-                  <input {...register("address", { required: true })} name='address' type="text" placeholder="Enter your address" defaultValue="3304 Randall Drive" />
-                  <span>
-                    <LocationTwo/>
-                  </span>
-                  <ErrorMsg msg={errors.address?.message} />
-                </div>
-              </div>
-            </div>
+        <input
+          {...register('phone')}
+          defaultValue={user?.phone}
+          placeholder="Your Phone"
+        />
+        <ErrorMsg msg={errors.phone?.message} />
 
-            <div className="col-xxl-12">
-              <div className="profile__input-box">
-                <div className="profile__input">
-                  <textarea {...register("bio", { required: true })} name='bio' placeholder="Enter your bio" defaultValue="Hi there, this is my bio..." />
-                  <ErrorMsg msg={errors.bio?.message} />
-                </div>
-              </div>
-            </div>
-            <div className="col-xxl-12">
-              <div className="profile__btn">
-                <button type="submit" className="tp-btn">Update Profile</button>
-              </div>
-            </div>
-          </div>
-        </form>
-      </div>
+        <input
+          {...register('address')}
+          defaultValue={user?.address}
+          placeholder="Your Address"
+        />
+        <ErrorMsg msg={errors.address?.message} />
+
+        <textarea
+          {...register('bio')}
+          defaultValue={user?.bio}
+          placeholder="Your Bio"
+        />
+        <ErrorMsg msg={errors.bio?.message} />
+
+        <button type="submit" className="tp-btn">
+          Update Profile
+        </button>
+      </form>
     </div>
   );
-};
-
-export default ProfileInfo;
+}

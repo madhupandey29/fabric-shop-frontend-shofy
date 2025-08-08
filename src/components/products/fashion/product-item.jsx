@@ -128,7 +128,9 @@ const ProductItem = ({ product }) => {
           <a href="#">{product.category.name || 'Unknown Category'}</a>
         </div>
         <h3 className="tp-product-title-2">
-          <Link href={`/fabric/${slug}`}>{product.name}</Link>
+          <Link href={`/fabric/${slug}`}><span
+      dangerouslySetInnerHTML={{ __html: product.name }}
+    /></Link>
         </h3>
         {/* <div className="tp-product-price-wrapper-2">
           <span className="tp-product-price-2 new-price">${product.salesPrice}</span>

@@ -1,5 +1,3 @@
-// CHECKOUT PAGE DISABLED: The entire CheckoutArea component is commented out as per request.
-/*
 'use client';
 import { useEffect } from "react";
 import { useSelector } from "react-redux";
@@ -13,29 +11,37 @@ import CheckoutLogin from "./checkout-login";
 import CheckoutOrderArea from "./checkout-order-area";
 import useCheckoutSubmit from "@/hooks/use-checkout-submit";
 
-// Main CheckoutArea component
 const CheckoutArea = () => {
-  // Router and authentication check
   const router = useRouter();
   useEffect(() => {
     const isAuthenticate = Cookies.get("userInfo");
-    if(!isAuthenticate){
-      router.push("/login")
+    if (!isAuthenticate) {
+      router.push("/login");
     }
-  },[router]);
-  // Checkout data and cart state
+  }, [router]);
+
   const checkoutData = useCheckoutSubmit();
-  const {handleSubmit,submitHandler,register,errors,handleCouponCode,couponRef,couponApplyMsg} = checkoutData;
+  const {
+    handleSubmit,
+    submitHandler,
+    register,
+    errors,
+    handleCouponCode,
+    couponRef,
+    couponApplyMsg,
+  } = checkoutData;
+
   const { cart_products } = useSelector((state) => state.cart);
+
   return (
     <>
-      // Checkout section layout
+      {/* Checkout section layout */}
       <section
         className="tp-checkout-area pb-120"
         style={{ backgroundColor: "#EFF1F5" }}
       >
         <div className="container">
-          // If cart is empty
+          {/* If cart is empty */}
           {cart_products.length === 0 && (
             <div className="text-center pt-50">
               <h3 className="py-2">No items found in cart to checkout</h3>
@@ -44,7 +50,8 @@ const CheckoutArea = () => {
               </Link>
             </div>
           )}
-          // If cart has products
+
+          {/* If cart has products */}
           {cart_products.length > 0 && (
             <div className="row">
               <div className="col-xl-7 col-lg-7">
@@ -76,4 +83,3 @@ const CheckoutArea = () => {
 };
 
 export default CheckoutArea;
-*/

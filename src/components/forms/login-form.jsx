@@ -1,101 +1,208 @@
+// components/forms/login-form.jsx
 'use client';
+
 import React, { useState } from 'react';
-import { useForm } from "react-hook-form";
-import { yupResolver } from "@hookform/resolvers/yup";
-import * as Yup from "yup";
-import { useRouter, } from 'next/navigation';
-import Link from 'next/link';
-// internal
-import { CloseEye, OpenEye } from '@/svg';
+import Cookies from 'js-cookie';
+import { useForm } from 'react-hook-form';
+import { yupResolver } from '@hookform/resolvers/yup';
+import * as Yup from 'yup';
+import { useRouter } from 'next/navigation';
 import ErrorMsg from '../common/error-msg';
-import { useLoginUserMutation } from '@/redux/features/auth/authApi';
 import { notifyError, notifySuccess } from '@/utils/toast';
 
-
-// schema
-const schema = Yup.object().shape({
-  email: Yup.string().required().email().label("Email"),
-  password: Yup.string().required().min(6).label("Password"),
+// validation schemas
+const passwordSchema = Yup.object().shape({
+  email:    Yup.string().required('Email is required').email('Enter a valid email'),
+  password: Yup.string().required('Password is required').min(6, 'At least 6 characters'),
 });
-const LoginForm = () => {
-  const [showPass, setShowPass] = useState(false);
-  // eslint-disable-next-line no-empty-pattern
-  const [loginUser, { }] = useLoginUserMutation();
+const otpRequestSchema = Yup.object().shape({
+  email: Yup.string().required('Email is required').email('Enter a valid email'),
+});
+
+export default function LoginForm() {
   const router = useRouter();
-  // react hook form
+
+  // modes: 'password' | 'otpRequest' | 'otpVerify'
+  const [mode,       setMode]       = useState('password');
+  const [savedEmail, setSavedEmail] = useState('');
+  const [otp,        setOtp]        = useState('');
+
+  // password form
   const {
-    register,
-    handleSubmit,
-    formState: { errors },
-    reset,
-  } = useForm({
-    resolver: yupResolver(schema),
-  });
-  // onSubmit
-  const onSubmit = (data) => {
-    loginUser({
-      email: data.email,
-      password: data.password,
-    })
-      .then((data) => {
-        if (data?.data) {
-          notifySuccess("Login successfully");
-          router.push('/checkout');
-        }
-        else {
-          notifyError(data?.error?.data?.error)
-        }
-      })
-    reset();
+    register: regPass,
+    handleSubmit: onPassSubmit,
+    formState: { errors: passErr },
+    reset: resetPass
+  } = useForm({ resolver: yupResolver(passwordSchema) });
+
+  // OTP request form
+  const {
+    register: regOtp,
+    handleSubmit: onOtpReqSubmit,
+    formState: { errors: otpErrReq },
+    reset: resetOtpReq
+  } = useForm({ resolver: yupResolver(otpRequestSchema) });
+
+  const API = process.env.NEXT_PUBLIC_API_BASE_URL;
+  const KEY = process.env.NEXT_PUBLIC_API_KEY;
+
+  // 1️⃣ Email/password login
+  const handlePasswordLogin = async (data) => {
+    try {
+      const res = await fetch(`${API}/users/login`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type':'application/json', 'x-api-key':KEY },
+        body: JSON.stringify({ identifier: data.email, password: data.password })
+      });
+      const json = await res.json();
+      if (!res.ok || !json.success) throw new Error(json.message||'Login failed');
+
+      Cookies.set('userInfo', JSON.stringify({ user: json.user }), { expires: 0.5 });
+      notifySuccess(json.message);
+      resetPass();
+      router.push('/profile');
+    } catch(err) {
+      notifyError(err.message);
+    }
   };
+
+  // 2️⃣ Request OTP
+  const handleOtpRequest = async (data) => {
+    try {
+      setSavedEmail(data.email);
+      const res = await fetch(`${API}/users/login/otp/request`, {
+        method:'POST', credentials:'include',
+        headers:{ 'Content-Type':'application/json', 'x-api-key':KEY },
+        body: JSON.stringify({ email: data.email })
+      });
+      const json = await res.json();
+      if (!res.ok || !json.success) throw new Error(json.message||'OTP send failed');
+
+      notifySuccess('OTP sent to your email');
+      setMode('otpVerify');
+      resetOtpReq();
+    } catch(err) {
+      notifyError(err.message);
+    }
+  };
+
+  // 3️⃣ Verify OTP & login
+  const handleOtpVerify = async (e) => {
+    e.preventDefault();
+    try {
+      const res = await fetch(`${API}/users/login/otp/verify`, {
+        method:'POST', credentials:'include',
+        headers:{ 'Content-Type':'application/json', 'x-api-key':KEY },
+        body: JSON.stringify({ email: savedEmail, otp })
+      });
+      const json = await res.json();
+      if (!res.ok || !json.success) throw new Error(json.message||'Invalid OTP');
+
+      Cookies.set('userInfo', JSON.stringify({ user: json.user }), { expires: 0.5 });
+      notifySuccess('Logged in successfully');
+      setOtp('');
+      router.push('/profile');
+    } catch(err) {
+      notifyError(err.message);
+    }
+  };
+
   return (
-    <form onSubmit={handleSubmit(onSubmit)}>
-      <div className="tp-login-input-wrapper">
-        <div className="tp-login-input-box">
-          <div className="tp-login-input">
-            <input {...register("email", { required: `Email is required!` })} name="email" id="email" type="email" placeholder="shofy@mail.com" />
+    <div>
+      {/* ───────── Email & Password Login ───────────── */}
+      {mode === 'password' && (
+        <form onSubmit={onPassSubmit(handlePasswordLogin)} className="space-y-4">
+
+           <div className="tp-login-input-box">
+            <div className="tp-login-input">
+              <input {...regPass('email')} type="email" placeholder="Your Email" />
+            </div>
+            <div className="tp-login-input-title"><label>Email</label></div>
+            <ErrorMsg msg={passErr.email?.message}/>
           </div>
-          <div className="tp-login-input-title">
-            <label htmlFor="email">Your Email</label>
+          
+          <div className="tp-login-input-box">
+            <div className="tp-login-input">
+              <input {...regPass('password')} type="password" placeholder="Your Password" />
+            </div>
+            <div className="tp-login-input-title"><label>Password</label></div>
+            <ErrorMsg msg={passErr.password?.message}/>
           </div>
-          <ErrorMsg msg={errors.email?.message} />
-        </div>
-        <div className="tp-login-input-box">
-          <div className="p-relative">
+
+          <div className="tp-login-bottom">
+            <button type="submit" className="tp-login-btn w-100">Login</button>
+          </div>
+        </form>
+      )}
+
+      {/* ───────── Divider + Toggle ────────────────── */}
+      <div className="tp-login-mail text-center my-6">
+        {mode === 'password' ? (
+          <button
+            onClick={() => setMode('otpRequest')}
+            className="text-gray-500 underline focus:outline-none"
+            type="button"
+          >
+            or login with OTP
+          </button>
+        ) : (
+          <button
+            onClick={() => setMode('password')}
+            className="text-gray-500 underline focus:outline-none"
+            type="button"
+          >
+            or Sign in with Email
+          </button>
+        )}
+      </div>
+
+      {/* ───────── OTP Request ────────────────────── */}
+      {mode === 'otpRequest' && (
+        <form onSubmit={onOtpReqSubmit(handleOtpRequest)} className="space-y-4 mb-6">
+
+           <div className="tp-login-input-box">
+            <div className="tp-login-input">
+              <input {...regOtp('email')} type="email" placeholder="Your Email" />
+            </div>
+            <div className="tp-login-input-title"><label>Email</label></div>
+            <ErrorMsg msg={otpErrReq.email?.message}/>
+          </div>
+          
+          <div className="tp-login-bottom">
+            <button type="submit" className="tp-login-btn w-100">Get OTP</button>
+          </div>
+        </form>
+      )}
+
+      {/* ───────── OTP Verify ─────────────────────── */}
+      {mode === 'otpVerify' && (
+        <form onSubmit={handleOtpVerify} className="space-y-4 mb-6">
+          <div className="tp-login-input-box">
             <div className="tp-login-input">
               <input
-                {...register("password", { required: `Password is required!` })}
-                id="password"
-                type={showPass ? "text" : "password"}
-                placeholder="Min. 6 character"
+                value={otp}
+                onChange={e => setOtp(e.target.value)}
+                placeholder="Enter OTP"
+                required
               />
             </div>
-            <div className="tp-login-input-eye" id="password-show-toggle">
-              <span className="open-eye" onClick={() => setShowPass(!showPass)}>
-                {showPass ? <CloseEye /> : <OpenEye />}
-              </span>
-            </div>
-            <div className="tp-login-input-title">
-              <label htmlFor="password">Password</label>
-            </div>
+            <div className="tp-login-input-title"><label>OTP</label></div>
           </div>
-          <ErrorMsg msg={errors.password?.message}/>
-        </div>
-      </div>
-      <div className="tp-login-suggetions d-sm-flex align-items-center justify-content-between mb-20">
-        <div className="tp-login-remeber">
-          <input id="remeber" type="checkbox" />
-          <label htmlFor="remeber">Remember me</label>
-        </div>
-        <div className="tp-login-forgot">
-          <Link href="/forgot">Forgot Password?</Link>
-        </div>
-      </div>
-      <div className="tp-login-bottom">
-        <button type='submit' className="tp-login-btn w-100">Login</button>
-      </div>
-    </form>
+          <div className="tp-login-bottom">
+            <button type="submit" className="tp-login-btn w-100">Verify OTP</button>
+          </div>
+          <div className="text-center">
+            <button
+              onClick={() => setMode('password')}
+              className="text-gray-500 underline focus:outline-none"
+              type="button"
+            >
+              back to password login
+            </button>
+          </div>
+        </form>
+      )}
+    </div>
   );
-};
-
-export default LoginForm;
+}

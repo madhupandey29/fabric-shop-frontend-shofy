@@ -1,129 +1,216 @@
 'use client';
-import React, { useState } from "react";
-import { useForm } from "react-hook-form";
-import { yupResolver } from "@hookform/resolvers/yup";
-import * as Yup from "yup";
-import { useRouter } from "next/navigation";
-// internal
-import { CloseEye, OpenEye } from "@/svg";
-import ErrorMsg from "../common/error-msg";
-import { notifyError, notifySuccess } from "@/utils/toast";
-import { useRegisterUserMutation } from "@/redux/features/auth/authApi";
+import React, { useState } from 'react';
+import { useForm }          from 'react-hook-form';
+import { yupResolver }      from '@hookform/resolvers/yup';
+import * as Yup             from 'yup';
+import { useRouter }        from 'next/navigation';
+import ErrorMsg             from '../common/error-msg';
+import { notifyError, notifySuccess } from '@/utils/toast';
 
-// schema
 const schema = Yup.object().shape({
-  name: Yup.string().required().label("Name"),
-  email: Yup.string().required().email().label("Email"),
-  password: Yup.string().required().min(6).label("Password"),
-  remember: Yup.bool()
-    .oneOf([true], "You must agree to the terms and conditions to proceed.")
-    .label("Terms and Conditions"),
+  name:          Yup.string().required('Name is required'),
+  email:         Yup.string().required('Email is required').email('Enter a valid email'),
+  password:      Yup.string().min(8, 'At least 8 characters').required('Password is required'),
+  organisation:  Yup.string().required('Organisation is required'),
+  phone:         Yup.string().required('Phone number is required'),
+  address:       Yup.string().required('Address is required'),
+  city:          Yup.string().required('City is required'),
+  state:         Yup.string().required('State is required'),
+  country:       Yup.string().required('Country is required'),
+  remember:      Yup.bool().oneOf([true], 'You must accept the terms'),
 });
 
-const RegisterForm = () => {
-  const [showPass, setShowPass] = useState(false);
-  // eslint-disable-next-line no-empty-pattern
-  const [registerUser, {}] = useRegisterUserMutation();
+export default function RegisterForm() {
   const router = useRouter();
-  // react hook form
-  const {register,handleSubmit,formState: { errors },reset} = useForm({
-    resolver: yupResolver(schema),
-  });
-  // on submit
-  const onSubmit = (data) => {
-    registerUser({
-      name: data.name,
-      email: data.email,
-      password: data.password,
-    }).then((result) => {
-      if (result?.error) {
-        notifyError("Register Failed");
-      } else {
-        notifySuccess(result?.data?.message);
-        router.push('/checkout');
-      }
-    });
-    reset();
+  const [stage, setStage]       = useState('form'); // 'form' or 'otp'
+  const [savedEmail, setEmail]  = useState('');
+  const [otp, setOtp]           = useState('');
+
+  const { register, handleSubmit, formState:{ errors }, reset } =
+    useForm({ resolver: yupResolver(schema) });
+
+  const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL;
+  const API_KEY  = process.env.NEXT_PUBLIC_API_KEY;
+
+  // Send OTP
+  const onFormSubmit = async (data) => {
+    try {
+      setEmail(data.email);
+      const res = await fetch(`${API_BASE}/users/send-otp`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': API_KEY,
+        },
+        body: JSON.stringify(data), // includes password too
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.message || 'Failed to send OTP');
+      notifySuccess(json.message);
+      setStage('otp');
+    } catch (err) {
+      notifyError(err.message);
+    }
   };
+
+  // Verify OTP & register
+  const onOtpSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      const res = await fetch(`${API_BASE}/users/verify-otp`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': API_KEY,
+        },
+        body: JSON.stringify({ email: savedEmail, otp }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.message || 'OTP verification failed');
+      notifySuccess(json.message);
+      reset();
+      router.push('/login');
+    } catch (err) {
+      notifyError(err.message);
+    }
+  };
+
   return (
-    <form onSubmit={handleSubmit(onSubmit)}>
-      <div className="tp-login-input-wrapper">
-        <div className="tp-login-input-box">
-          <div className="tp-login-input">
-            <input
-              {...register("name", { required: `Name is required!` })}
-              id="name"
-              name="name"
-              type="text"
-              placeholder="Shahnewaz Sakil"
-            />
+    <>
+      {stage === 'form' && (
+        <form onSubmit={handleSubmit(onFormSubmit)}>
+          {/* Name */}
+          <div className="tp-login-input-box">
+            <div className="tp-login-input">
+              <input {...register('name')} id="name" type="text" placeholder="Your Name" />
+            </div>
+            <div className="tp-login-input-title">
+              <label htmlFor="name">Name</label>
+            </div>
+            <ErrorMsg msg={errors.name?.message}/>
           </div>
-          <div className="tp-login-input-title">
-            <label htmlFor="name">Your Name</label>
+
+          {/* Email */}
+          <div className="tp-login-input-box">
+            <div className="tp-login-input">
+              <input {...register('email')} id="email" type="email" placeholder="Your Email" />
+            </div>
+            <div className="tp-login-input-title">
+              <label htmlFor="email">Email</label>
+            </div>
+            <ErrorMsg msg={errors.email?.message}/>
           </div>
-          <ErrorMsg msg={errors.name?.message} />
-        </div>
-        <div className="tp-login-input-box">
-          <div className="tp-login-input">
-            <input
-              {...register("email", { required: `Email is required!` })}
-              id="email"
-              name="email"
-              type="email"
-              placeholder="shofy@mail.com"
-            />
-          </div>
-          <div className="tp-login-input-title">
-            <label htmlFor="email">Your Email</label>
-          </div>
-          <ErrorMsg msg={errors.email?.message} />
-        </div>
-        <div className="tp-login-input-box">
-          <div className="p-relative">
+
+          {/* Password (new) */}
+          <div className="tp-login-input-box">
             <div className="tp-login-input">
               <input
-                {...register("password", { required: `Password is required!` })}
+                {...register('password')}
                 id="password"
-                name="password"
-                type={showPass ? "text" : "password"}
-                placeholder="Min. 6 character"
+                type="password"
+                placeholder="Create Password"
+                autoComplete="new-password"
               />
-            </div>
-            <div className="tp-login-input-eye" id="password-show-toggle">
-              <span className="open-eye" onClick={() => setShowPass(!showPass)}>
-                {showPass ? <CloseEye /> : <OpenEye />}
-              </span>
             </div>
             <div className="tp-login-input-title">
               <label htmlFor="password">Password</label>
             </div>
+            <ErrorMsg msg={errors.password?.message}/>
           </div>
-          <ErrorMsg msg={errors.password?.message} />
-        </div>
-      </div>
-      <div className="tp-login-suggetions d-sm-flex align-items-center justify-content-between mb-20">
-        <div className="tp-login-remeber">
-          <input
-            {...register("remember", {
-              required: `Terms and Conditions is required!`,
-            })}
-            id="remember"
-            name="remember"
-            type="checkbox"
-          />
-          <label htmlFor="remember">
-            I accept the terms of the Service & <a href="#">Privacy Policy</a>.
-          </label>
-          <ErrorMsg msg={errors.remember?.message} />
-        </div>
-      </div>
-      <div className="tp-login-bottom">
-        <button type="submit" className="tp-login-btn w-100">
-          Sign Up
-        </button>
-      </div>
-    </form>
-  );
-};
 
-export default RegisterForm;
+          {/* Organisation */}
+          <div className="tp-login-input-box">
+            <div className="tp-login-input">
+              <input {...register('organisation')} id="organisation" type="text" placeholder="Your Organisation" />
+            </div>
+            <div className="tp-login-input-title">
+              <label htmlFor="organisation">Organisation</label>
+            </div>
+            <ErrorMsg msg={errors.organisation?.message}/>
+          </div>
+
+          {/* Phone */}
+          <div className="tp-login-input-box">
+            <div className="tp-login-input">
+              <input {...register('phone')} id="phone" type="text" placeholder="Your Phone Number" />
+            </div>
+            <div className="tp-login-input-title">
+              <label htmlFor="phone">Phone</label>
+            </div>
+            <ErrorMsg msg={errors.phone?.message}/>
+          </div>
+
+          {/* Address */}
+          <div className="tp-login-input-box">
+            <div className="tp-login-input">
+              <input {...register('address')} id="address" type="text" placeholder="Your Address" />
+            </div>
+            <div className="tp-login-input-title">
+              <label htmlFor="address">Address</label>
+            </div>
+            <ErrorMsg msg={errors.address?.message}/>
+          </div>
+
+          {/* City */}
+          <div className="tp-login-input-box">
+            <div className="tp-login-input">
+              <input {...register('city')} id="city" type="text" placeholder="Your City" />
+            </div>
+            <div className="tp-login-input-title">
+              <label htmlFor="city">City</label>
+            </div>
+            <ErrorMsg msg={errors.city?.message}/>
+          </div>
+
+          {/* State */}
+          <div className="tp-login-input-box">
+            <div className="tp-login-input">
+              <input {...register('state')} id="state" type="text" placeholder="Your State" />
+            </div>
+            <div className="tp-login-input-title">
+              <label htmlFor="state">State</label>
+            </div>
+            <ErrorMsg msg={errors.state?.message}/>
+          </div>
+
+          {/* Country */}
+          <div className="tp-login-input-box">
+            <div className="tp-login-input">
+              <input {...register('country')} id="country" type="text" placeholder="Your Country" />
+            </div>
+            <div className="tp-login-input-title">
+              <label htmlFor="country">Country</label>
+            </div>
+            <ErrorMsg msg={errors.country?.message}/>
+          </div>
+
+          {/* Terms */}
+          <div className="tp-login-input-box">
+            <label>
+              <input {...register('remember')} type="checkbox" /> Accept Terms
+            </label>
+            <ErrorMsg msg={errors.remember?.message}/>
+          </div>
+
+          <button type="submit" className="tp-login-btn w-100">Send OTP</button>
+        </form>
+      )}
+
+      {stage === 'otp' && (
+        <form onSubmit={onOtpSubmit}>
+          <div className="tp-login-input-box">
+            <div className="tp-login-input">
+              <input id="otp" value={otp} onChange={e => setOtp(e.target.value)} placeholder="Enter OTP" required />
+            </div>
+            <div className="tp-login-input-title">
+              <label htmlFor="otp">OTP</label>
+            </div>
+          </div>
+          <button type="submit" className="tp-login-btn w-100">Verify & Register</button>
+        </form>
+      )}
+    </>
+  );
+}
