@@ -1,17 +1,21 @@
-
 'use client';
 
 import React from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 
-
-import { useGetSubstructureQuery }   from '@/redux/features/substructureApi';
-import { useGetContentByIdQuery }    from '@/redux/features/contentApi';
-import { useGetSubfinishQuery }      from '@/redux/features/subfinishApi';
+import { useGetSubstructureQuery } from '@/redux/features/substructureApi';
+import { useGetContentByIdQuery }   from '@/redux/features/contentApi';
+import { useGetSubfinishQuery }     from '@/redux/features/subfinishApi';
+import { useGetSeoByProductQuery }  from '@/redux/features/seoApi';
 
 import { add_to_wishlist } from '@/redux/features/wishlist-slice';
 
+/* small helpers */
+const nonEmpty = (v) =>
+  v !== undefined && v !== null && (typeof v === 'number' || String(v).trim() !== '');
+const pick = (...xs) => xs.find(nonEmpty);
 
+/* lookup mini-components */
 const StructureInfo = ({ id }) => {
   const { data, isLoading, isError } = useGetSubstructureQuery(id, { skip: !id });
   if (!id) return null;
@@ -45,25 +49,34 @@ const FinishInfo = ({ id }) => {
   );
 };
 
-
 const DetailsWrapper = ({ productItem = {} }) => {
   const {
     _id,
-    /* sku, */
     title,
     category,
     newCategoryId,
     description,
     status,
-   /*  price = 0,
-    discount = 0, */
-
-    structureId,     
+    structureId,
     contentId,
-    finishId,        
+    finishId,
     gsm,
     width,
+    groupcode,
+    slug,
   } = productItem;
+
+  // 🔹 Get SKU from SEO (with fallbacks)
+  const { data: seoResp } = useGetSeoByProductQuery(_id, { skip: !_id });
+  const seoDoc  = Array.isArray(seoResp?.data) ? seoResp?.data?.[0] : (seoResp?.data || seoResp);
+  const seoSku  = pick(
+    seoDoc?.identifier,
+    seoDoc?.sku,
+    seoDoc?.productIdentifier,
+    seoDoc?.productCode,
+    seoDoc?.code
+  );
+  const skuValue = pick(seoSku, groupcode?.name, slug, _id);
 
   const dispatch = useDispatch();
   const { wishlist } = useSelector(state => state.wishlist);
@@ -77,7 +90,10 @@ const DetailsWrapper = ({ productItem = {} }) => {
         <span>{category?.name || newCategoryId?.name}</span>
       </div>
 
-      <h3 className="tp-product-details-title">{title}</h3>
+      <h3
+        className="tp-product-details-title"
+        dangerouslySetInnerHTML={{ __html: title }}
+      />
 
       <div className="tp-product-details-inventory d-flex align-items-center mb-10">
         <div className="tp-product-details-stock mb-10">
@@ -85,31 +101,14 @@ const DetailsWrapper = ({ productItem = {} }) => {
         </div>
       </div>
 
-      <p>Description: {description}</p>
+      <p dangerouslySetInnerHTML={{ __html: description }} />
 
-     
-     {/*  <div className="tp-product-details-price-wrapper mb-20">
-        {discount > 0 ? (
-          <>
-            <span className="tp-product-details-price old-price">
-              {price.toFixed(2)}
-            </span>
-            <span className="tp-product-details-price new-price">
-              {(price - (price * discount) / 100).toFixed(2)}
-            </span>
-          </>
-        ) : (
-          <span className="tp-product-details-price new-price">
-            {price.toFixed(2)}
-          </span>
-        )}
-      </div> */}
-
-     
       <div className="tp-product-details-query" style={{ marginBottom: 20 }}>
-        <div className="tp-product-details-query-item d-flex align-items-center">
-{/*           <span>SKU:  </span><p>{sku}</p>
- */}        </div>
+        {skuValue && (
+          <div className="tp-product-details-query-item d-flex align-items-center">
+            <span>SKU: </span><p>{skuValue}</p>
+          </div>
+        )}
 
         <StructureInfo id={structureId} />
         <ContentInfo   id={contentId}   />
@@ -121,10 +120,9 @@ const DetailsWrapper = ({ productItem = {} }) => {
           <span>Width: </span><p>{width}</p>
         </div>
 
-        <FinishInfo    id={finishId}    />
+        <FinishInfo id={finishId} />
       </div>
 
-     
       <div className="tp-product-details-action-wrapper">
         <div
           className="tp-product-details-action-item-wrapper d-flex align-items-center"
@@ -139,7 +137,6 @@ const DetailsWrapper = ({ productItem = {} }) => {
             </button>
           </div>
 
-          
           <button
             type="button"
             onClick={toggleWishlist}

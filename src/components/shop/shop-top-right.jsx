@@ -8,7 +8,7 @@ import {handleFilterSidebarOpen } from "@/redux/features/shop-filter-slice";
 const ShopTopRight = ({selectHandleFilter}) => {
   const dispatch = useDispatch()
   return (
-    <div className="tp-shop-top-right d-sm-flex align-items-center justify-content-xl-end">
+    <div className="tp-shop-top-right d-sm-flex align-items-center justify-content-xl-end mb-20">
       <div className="tp-shop-top-select">
         <NiceSelect
           options={[

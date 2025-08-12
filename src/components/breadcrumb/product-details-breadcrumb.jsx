@@ -14,7 +14,9 @@ const ProductDetailsBreadcrumb = ({category,title}) => {
                    </span>
                    <span><a href="#">Home</a></span>
                    <span><a href="#">{category}</a></span>
-                   <span>{title}</span>
+                  <span
+                     dangerouslySetInnerHTML={{ __html: title }}
+                     ></span>
                 </div>
              </div>
           </div>

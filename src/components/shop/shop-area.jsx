@@ -160,27 +160,26 @@ export default function ShopArea({ shop_right = false, hidden_sidebar = false })
   let content;
   if (isLoading)           content = <ShopLoader loading />;
   else if (isError)        content = <ErrorMsg msg="There was an error" />;
-  else if (!filteredProducts.length) {
-    content = <ErrorMsg msg="No Products found!" />;
-  } else if (hidden_sidebar) {
-    content = (
-      <ShopHiddenSidebarArea
-        all_products={products}
-        products={filteredProducts}
-        otherProps={otherProps}
-      />
-    );
-  } else {
-    content = (
-      <ShopContent
-        all_products={products}
-        products={filteredProducts}
-        otherProps={otherProps}
-        shop_right={shop_right}
-        hidden_sidebar={hidden_sidebar}
-      />
-    );
-  }
+
+else if (hidden_sidebar) {
+  content = (
+    <ShopHiddenSidebarArea
+      all_products={products}
+      products={filteredProducts}
+      otherProps={otherProps}
+    />
+  );
+} else {
+  content = (
+    <ShopContent
+      all_products={products}
+      products={filteredProducts}
+      otherProps={otherProps}
+      shop_right={shop_right}
+      hidden_sidebar={hidden_sidebar}
+    />
+  );
+}
 
   return (
     <>

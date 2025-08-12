@@ -307,3 +307,14 @@
     margin-left: 10px;
   }
 }
+/* Base header height (non-sticky). 
+   .#{$theme-prifix}-header usually compiles to .tp-header */
+.#{$theme-prifix}-header {
+  --tp-header-height: 88px;   // ← set to your actual header height
+}
+
+/* When your header becomes sticky (you already use this class combo) */
+.tp-header-sticky.header-sticky {
+  --tp-header-height: 72px;   // ← set to the sticky/shrunk height
+}
+

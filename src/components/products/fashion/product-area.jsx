@@ -1,33 +1,39 @@
 'use client';
+
+import React from 'react';
+import Link from 'next/link';
 import ErrorMsg from '@/components/common/error-msg';
+import EmptyState from '@/components/common/empty-state'; // ⟵ use your empty state
 import { useGetOffersQuery } from '@/redux/features/newProductApi';
 import ProductItem from './product-item';
 import { HomeTwoPrdLoader } from '@/components/loader';
 import { TextShapeLine } from '@/svg';
 
 const ProductArea = () => {
-  // Use the offer products API
-  const { data: products, isError, isLoading } = useGetOffersQuery();
+  const { data, isError, isLoading } = useGetOffersQuery();
+  const items = data?.data ?? [];
 
-  // decide what to render
   let content = null;
 
   if (isLoading) {
-    content = (
-      <HomeTwoPrdLoader loading={isLoading} />
-    );
-  }
-  if (!isLoading && isError) {
+    content = <HomeTwoPrdLoader loading />;
+  } else if (isError) {
     content = <ErrorMsg msg="There was an error" />;
-  }
-  if (!isLoading && !isError && products?.data?.length === 0) {
-    content = <ErrorMsg msg="No Products found!" />;
-  }
-  if (!isLoading && !isError && products?.data?.length > 0) {
-    const product_items = products.data;
+  } else if (!items.length) {
+    // show your modern empty state
+    content = (
+      <EmptyState
+        title="No products found"
+        subtitle="Try adjusting your filters or explore more categories."
+        tips={['Clear filters', 'Try a different category', 'Check spelling or keywords']}
+        primaryAction={{ label: 'Browse all products', href: '/fabric' }}
+        secondaryAction={{ label: 'Go to Home', href: '/' }}
+      />
+    );
+  } else {
     content = (
       <div className="row">
-        {product_items.map((prd) => (
+        {items.map((prd) => (
           <div key={prd._id} className="col-xl-3 col-lg-4 col-md-6 col-sm-6">
             <ProductItem product={prd} />
           </div>
@@ -35,25 +41,25 @@ const ProductArea = () => {
       </div>
     );
   }
+
   return (
-    <>
-      <section className="tp-product-area pb-90">
-        <div className="container">
-          <div className="row">
-            <div className="col-xl-12">
-              <div className="tp-section-title-wrapper-2 text-center mb-35">
-                <span className="tp-section-title-pre-2">
-                  Bestselling Fabrics of the Season
-                  <TextShapeLine />
-                </span>
-                <h3 className="tp-section-title-2"> Our Most Loved Yarns</h3>
-              </div>
+    <section className="tp-product-area pb-90">
+      <div className="container">
+        <div className="row">
+          <div className="col-xl-12">
+            <div className="tp-section-title-wrapper-2 text-center mb-35">
+              <span className="tp-section-title-pre-2">
+                Bestselling Fabrics of the Season
+                <TextShapeLine />
+              </span>
+              <h3 className="tp-section-title-2">Our Most Loved Yarns</h3>
             </div>
           </div>
-          {content}
         </div>
-      </section>
-    </>
+
+        {content}
+      </div>
+    </section>
   );
 };
 

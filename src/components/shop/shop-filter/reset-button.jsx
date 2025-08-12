@@ -12,12 +12,9 @@ const ResetButton = ({ shop_right = false,setPriceValues,maxPrice,handleFilterCh
     router.push(`/${shop_right ? "shop-right-sidebar" : "shop"}`);
   };
   return (
-    <div className="tp-shop-widget mb-50">
-      <h3 className="tp-shop-widget-title">Reset Filter</h3>
-      <button
+    <div className="tp-shop-widget mb-20"><button
         onClick={handleReset}
-        className="tp-btn"
-      >
+        className="tp-btn" >
         Reset Filter
       </button>
     </div>

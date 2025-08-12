@@ -1,24 +1,17 @@
 'use client';
 import React, { useState, useEffect } from 'react';
-import Pagination                      from '@/ui/Pagination';
-import ProductItem                     from '../products/fashion/product-item';
-import ShopListItem                    from './shop-list-item';
-import ShopTopLeft                     from './shop-top-left';
-import ShopTopRight                    from './shop-top-right';
-import PriceFilter                     from './shop-filter/price-filter';
-import StatusFilter                    from './shop-filter/status-filter';
-import ShopSidebarFilters              from './ShopSidebarFilters';
-import ResetButton                     from './shop-filter/reset-button';
-import PopularProductImages            from '@/components/products/fashion/popular-product-images';
-import WeeksFeaturedImages             from '@/components/products/fashion/weeks-featured-images';
-import {
-  useGetPopularNewProductsQuery,
-  useGetTopRatedQuery,
-} from '@/redux/features/newProductApi';
+/* import Pagination from '@/ui/Pagination'; */
+import ProductItem from '../products/fashion/product-item';
+import ShopListItem from './shop-list-item';
+import ShopTopLeft from './shop-top-left';
+import ShopTopRight from './shop-top-right';
+import ShopSidebarFilters from './ShopSidebarFilters';
+import ResetButton from './shop-filter/reset-button';
+import EmptyState from '@/components/common/empty-state';
 
 const ShopContent = ({
   all_products = [],
-  products     = [],
+  products = [],
   otherProps,
   shop_right,
   hidden_sidebar,
@@ -26,37 +19,42 @@ const ShopContent = ({
   const {
     priceFilterValues,
     selectHandleFilter,
-    currPage, setCurrPage,
+    setCurrPage,
     selectedFilters,
     handleFilterChange,
   } = otherProps;
 
-  const { setPriceValue } = priceFilterValues;
+  const { setPriceValue, priceValue } = priceFilterValues || {};
   const [filteredRows, setFilteredRows] = useState(products);
-  const [pageStart,    setPageStart]    = useState(0);
-  const [countOfPage,  setCountOfPage]  = useState(12);
+  const [pageStart, setPageStart] = useState(0);
+  const [countOfPage] = useState(12);
 
-  // reset pagination when products changes
   useEffect(() => {
     setFilteredRows(products);
     setPageStart(0);
     setCurrPage(1);
   }, [products, setCurrPage]);
 
-  // popular & top-rated
-  const { data: popData, isLoading: popLoading }     = useGetPopularNewProductsQuery();
-  const { data: topData, isLoading: topLoading }     = useGetTopRatedQuery();
-  const popularProducts   = popData?.data  || [];
-  const topRatedProducts  = topData?.data  || [];
+  const maxPrice = all_products.reduce(
+    (m, p) => Math.max(m, +p.salesPrice || +p.price || 0),
+    1000
+  );
 
-  const paginatedData = (items, start, cnt) => {
-    setFilteredRows(items);
-    setPageStart(start);
-    setCountOfPage(cnt);
+  // any active?
+  const pv = Array.isArray(priceValue) ? priceValue : [0, maxPrice];
+  const priceActive = pv[0] > 0 || pv[1] < maxPrice;
+  const facetsActive =
+    selectedFilters && Object.values(selectedFilters).some((v) =>
+      Array.isArray(v) ? v.length > 0 : !!v
+    );
+  const anyActive = !!(priceActive || facetsActive);
+
+  // reset handler for EmptyState CTA
+  const resetAll = () => {
+    setPriceValue?.([0, maxPrice]);
+    handleFilterChange?.({});
+    setCurrPage?.(1);
   };
-
-  // max slider cap
-  const maxPrice = all_products.reduce((m, p) => Math.max(m, +p.salesPrice||0), 1000);
 
   return (
     <section className="tp-shop-area pb-120">
@@ -65,59 +63,70 @@ const ShopContent = ({
           {/* desktop sidebar */}
           {!shop_right && !hidden_sidebar && (
             <aside className="col-xl-3 col-lg-4 d-none d-lg-block">
-              <PriceFilter priceFilterValues={priceFilterValues} maxPrice={maxPrice} />
-              <StatusFilter setCurrPage={setCurrPage} />
-              <ShopSidebarFilters
-                selected={selectedFilters}
-                onFilterChange={handleFilterChange}
-              />
-              <ResetButton
-                setPriceValues={setPriceValue}
-                maxPrice={maxPrice}
-                handleFilterChange={handleFilterChange}
-              />
+              <div className="sticky-filter">
+                <div className="filter-header d-flex align-items-center justify-content-between">
+                  <h3 className="tp-shop-widget-title mb-0">Filter</h3>
+                  <ResetButton
+                    className="filter-reset-btn"
+                    active={anyActive}
+                    setPriceValues={setPriceValue}
+                    maxPrice={maxPrice}
+                    handleFilterChange={handleFilterChange}
+                    aria-label="Reset all filters"
+                  />
+                </div>
 
-              <div className="tp-shop-widget mb-30">
-                <h3 className="tp-shop-widget-title">Popular</h3>
-                <PopularProductImages
-                  products={popularProducts.map(x => x.product)}
-                  loading={popLoading}
-                />
-              </div>
-
-              <div className="tp-shop-widget mb-30">
-                <h3 className="tp-shop-widget-title">Top Rated</h3>
-                <WeeksFeaturedImages
-                  products={topRatedProducts.map(x => x.product)}
-                  loading={topLoading}
+                <ShopSidebarFilters
+                  selected={selectedFilters}
+                  onFilterChange={handleFilterChange}
+                  hideTitle={true}
                 />
               </div>
             </aside>
           )}
 
           {/* main */}
-          <div className={hidden_sidebar ? 'col-xl-12 col-lg-12' : 'col-xl-9 col-lg-8 col-12'}>
+          <div
+            className={
+              hidden_sidebar ? 'col-xl-12 col-lg-12' : 'col-xl-9 col-lg-8 col-12'
+            }
+          >
             <div className="tp-shop-main-wrapper">
-              <div className="tp-shop-top mb-45">
-                <div className="row">
-                  <div className="col-xl-6">
-                    <ShopTopLeft
-                      showing={
-                        filteredRows.slice(pageStart, pageStart + countOfPage).length
-                      }
-                      total={all_products.length}
-                    />
-                  </div>
-                  <div className="col-xl-6">
-                    <ShopTopRight selectHandleFilter={selectHandleFilter} />
+              <div className="shop-toolbar-sticky">
+                <div className="tp-shop-top mb-45">
+                  <div className="row">
+                    <div className="col-xl-6">
+                      <ShopTopLeft
+                        showing={
+                          filteredRows.slice(pageStart, pageStart + countOfPage)
+                            .length
+                        }
+                        total={all_products.length}
+                      />
+                    </div>
+                    <div className="col-xl-6">
+                      <ShopTopRight selectHandleFilter={selectHandleFilter} />
+                    </div>
                   </div>
                 </div>
               </div>
 
-              {filteredRows.length === 0 ? (
-                <h2 className="text-center">No products found</h2>
-              ) : (
-                <div className="tp-shop-items-wrapper tp-shop-item-primary">
+              <div className="tp-shop-items-wrapper tp-shop-item-primary">
+                {filteredRows.length === 0 ? (
+                  <div className="shop-empty">
+                    <EmptyState
+                      title="No products match your filters"
+                      subtitle="Try adjusting your filters or explore more categories."
+                      tips={[
+                        'Clear some filters',
+                        'Try a different category',
+                        'Widen the price range',
+                      ]}
+                      primaryAction={{ label: 'Reset all filters', onClick: resetAll }}
+                      secondaryAction={{ label: 'Browse all products', href: '/fabric' }}
+                    />
+                  </div>
+                ) : (
                   <div className="tab-content" id="productTabContent">
                     <div
                       className="tab-pane fade show active"
@@ -125,12 +134,17 @@ const ShopContent = ({
                       role="tabpanel"
                       aria-labelledby="grid-tab"
                     >
-                      <div className="row">
-                        {filteredRows.slice(pageStart, pageStart + countOfPage).map((item) => (
-                          <div key={item._id} className="col-xl-4 col-md-6 col-sm-6">
-                            <ProductItem product={item} />
-                          </div>
-                        ))}
+                      <div className="row g-4">
+                        {filteredRows
+                          .slice(pageStart, pageStart + countOfPage)
+                          .map((item) => (
+                            <div
+                              key={item._id}
+                              className="col-xl-4 col-md-6 col-sm-6"
+                            >
+                              <ProductItem product={item} />
+                            </div>
+                          ))}
                       </div>
                     </div>
 
@@ -141,37 +155,33 @@ const ShopContent = ({
                       aria-labelledby="list-tab"
                     >
                       <div className="tp-shop-list-wrapper tp-shop-item-primary mb-70">
-                        {filteredRows.slice(pageStart, pageStart + countOfPage).map((item) => (
-                          <ShopListItem key={item._id} product={item} />
-                        ))}
+                        {filteredRows
+                          .slice(pageStart, pageStart + countOfPage)
+                          .map((item) => (
+                            <ShopListItem key={item._id} product={item} />
+                          ))}
                       </div>
                     </div>
                   </div>
-                </div>
-              )}
-
-              {filteredRows.length > 0 && (
-                <div className="tp-shop-pagination mt-20">
-                  <Pagination
-                    items={filteredRows}
-                    countOfPage={countOfPage}
-                    paginatedData={paginatedData}
-                    currPage={currPage}
-                    setCurrPage={setCurrPage}
-                  />
-                </div>
-              )}
+                )}
+              </div>
             </div>
           </div>
 
-          {/* right sidebar */}
           {shop_right && (
-            <aside className="col-xl-3 col-lg-4 d-none d-lg-block">
-              {/* same sidebar JSX as above */}
-            </aside>
+            <aside className="col-xl-3 col-lg-4 d-none d-lg-block"></aside>
           )}
         </div>
       </div>
+
+      <style jsx>{`
+        .shop-empty {
+          min-height: 40vh;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+      `}</style>
     </section>
   );
 };
