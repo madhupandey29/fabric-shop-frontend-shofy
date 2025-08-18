@@ -42,11 +42,7 @@ export const authApi = apiSlice.injectEndpoints({
       async onQueryStarted(arg, { queryFulfilled, dispatch }) {
         try {
           const { data } = await queryFulfilled;
-          Cookies.set(
-            "userInfo",
-            JSON.stringify({ user: data.user }),
-            { expires: 0.5 }
-          );
+          Cookies.set("userInfo", JSON.stringify({ user: data.user }), { expires: 0.5 });
           dispatch(userLoggedIn({ accessToken: data.token, user: data.user }));
         } catch (err) {
           console.error("loginUser error:", err);
@@ -71,11 +67,7 @@ export const authApi = apiSlice.injectEndpoints({
       async onQueryStarted(arg, { queryFulfilled, dispatch }) {
         try {
           const { data } = await queryFulfilled;
-          Cookies.set(
-            "userInfo",
-            JSON.stringify({ user: data.user }),
-            { expires: 0.5 }
-          );
+          Cookies.set("userInfo", JSON.stringify({ user: data.user }), { expires: 0.5 });
           dispatch(userLoggedIn({ accessToken: data.token, user: data.user }));
         } catch (err) {
           console.error("verifyLoginOTP error:", err);
@@ -104,10 +96,10 @@ export const authApi = apiSlice.injectEndpoints({
       }),
     }),
 
-    // ─── **NEW**: Update Profile ───────────────
+    // ─── Update Profile ────────────────────────
     updateProfile: builder.mutation({
       query: ({ id, ...data }) => ({
-        url: `users/${id}`,          // matches your GET /:userId route for update
+        url: `users/${id}`,
         method: "PUT",
         credentials: "include",
         body: data,
@@ -115,17 +107,52 @@ export const authApi = apiSlice.injectEndpoints({
       async onQueryStarted(arg, { queryFulfilled, dispatch }) {
         try {
           const { data } = await queryFulfilled;
-          // Optionally update auth state if backend returns updated user
           dispatch(userLoggedIn({ user: data }));
         } catch (err) {
           console.error("updateProfile error:", err);
         }
       },
     }),
+
+    // ───────────────────────────────────────────
+    // ✅ ADD THESE THREE ENDPOINTS
+    // ───────────────────────────────────────────
+
+    // 1) Email verification (your component uses a *Query* hook)
+    confirmEmail: builder.query({
+      // adjust URL if your backend uses a different route
+      query: (token) => ({
+        url: `users/verify-email/${token}`,
+        method: "GET",
+        credentials: "include",
+      }),
+    }),
+
+    // 2) Forgot → send reset mail (your form passes { verifyEmail: email })
+    resetPassword: builder.mutation({
+      // adjust URL if different on your backend
+      query: ({ verifyEmail }) => ({
+        url: "users/password/forgot/request",
+        method: "POST",
+        credentials: "include",
+        body: { email: verifyEmail },
+      }),
+    }),
+
+    // 3) Forgot → confirm new password with token
+    confirmForgotPassword: builder.mutation({
+      // adjust URL if different on your backend
+      query: ({ password, token }) => ({
+        url: "users/password/forgot/confirm",
+        method: "POST",
+        credentials: "include",
+        body: { password, token },
+      }),
+    }),
   }),
 });
 
-// Export hooks for all endpoints, including the new updateProfile
+// Export hooks (add the three new ones here)
 export const {
   useSendRegistrationOTPMutation,
   useVerifyOTPAndRegisterMutation,
@@ -134,5 +161,10 @@ export const {
   useVerifyLoginOTPMutation,
   useGetSessionInfoQuery,
   useLogoutUserMutation,
-  useUpdateProfileMutation,     // ← now available!
+  useUpdateProfileMutation,
+
+  // ✅ NEW exports to satisfy your components
+  useConfirmEmailQuery,
+  useResetPasswordMutation,
+  useConfirmForgotPasswordMutation,
 } = authApi;

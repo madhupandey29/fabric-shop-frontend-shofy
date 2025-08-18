@@ -1,7 +1,6 @@
 'use client';
 
 import React from 'react';
-import Link from 'next/link';
 import ErrorMsg from '@/components/common/error-msg';
 import EmptyState from '@/components/common/empty-state'; // ⟵ use your empty state
 import { useGetOffersQuery } from '@/redux/features/newProductApi';

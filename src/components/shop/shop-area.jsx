@@ -9,6 +9,8 @@ import ShopFilterOffCanvas             from '../common/shop-filter-offcanvas';
 import ShopContent                     from './shop-content';
 import ShopHiddenSidebarArea           from './shop-hidden-sidebar-area';
 
+
+
 import {
   useGetAllNewProductsQuery,
   useGetPriceUptoQuery,

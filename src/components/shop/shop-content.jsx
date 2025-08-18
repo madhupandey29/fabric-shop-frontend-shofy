@@ -29,6 +29,23 @@ const ShopContent = ({
   const [pageStart, setPageStart] = useState(0);
   const [countOfPage] = useState(12);
 
+  // measure header + toolbar to center the empty state in remaining viewport
+  const [centerOffset, setCenterOffset] = useState(140);
+  useEffect(() => {
+    const calc = () => {
+      const header =
+        document.querySelector('.tp-header-area') ||
+        document.querySelector('.tp-header-style-primary');
+      const toolbar = document.querySelector('.shop-toolbar-sticky');
+      const h = header ? header.getBoundingClientRect().height : 0;
+      const t = toolbar ? toolbar.getBoundingClientRect().height : 0;
+      setCenterOffset(h + t);
+    };
+    calc();
+    window.addEventListener('resize', calc);
+    return () => window.removeEventListener('resize', calc);
+  }, []);
+
   useEffect(() => {
     setFilteredRows(products);
     setPageStart(0);
@@ -86,21 +103,14 @@ const ShopContent = ({
           )}
 
           {/* main */}
-          <div
-            className={
-              hidden_sidebar ? 'col-xl-12 col-lg-12' : 'col-xl-9 col-lg-8 col-12'
-            }
-          >
+          <div className={hidden_sidebar ? 'col-xl-12 col-lg-12' : 'col-xl-9 col-lg-8 col-12'}>
             <div className="tp-shop-main-wrapper">
               <div className="shop-toolbar-sticky">
                 <div className="tp-shop-top mb-45">
                   <div className="row">
                     <div className="col-xl-6">
                       <ShopTopLeft
-                        showing={
-                          filteredRows.slice(pageStart, pageStart + countOfPage)
-                            .length
-                        }
+                        showing={filteredRows.slice(pageStart, pageStart + countOfPage).length}
                         total={all_products.length}
                       />
                     </div>
@@ -113,15 +123,14 @@ const ShopContent = ({
 
               <div className="tp-shop-items-wrapper tp-shop-item-primary">
                 {filteredRows.length === 0 ? (
-                  <div className="shop-empty">
+                  <div
+                    className="shop-empty"
+                    style={{ ['--page-offset']: `${centerOffset}px` }}
+                  >
                     <EmptyState
                       title="No products match your filters"
                       subtitle="Try adjusting your filters or explore more categories."
-                      tips={[
-                        'Clear some filters',
-                        'Try a different category',
-                        'Widen the price range',
-                      ]}
+                      tips={['Clear some filters', 'Try a different category', 'Widen the price range']}
                       primaryAction={{ label: 'Reset all filters', onClick: resetAll }}
                       secondaryAction={{ label: 'Browse all products', href: '/fabric' }}
                     />
@@ -138,10 +147,7 @@ const ShopContent = ({
                         {filteredRows
                           .slice(pageStart, pageStart + countOfPage)
                           .map((item) => (
-                            <div
-                              key={item._id}
-                              className="col-xl-4 col-md-6 col-sm-6"
-                            >
+                            <div key={item._id} className="col-xl-4 col-md-6 col-sm-6">
                               <ProductItem product={item} />
                             </div>
                           ))}
@@ -168,18 +174,17 @@ const ShopContent = ({
             </div>
           </div>
 
-          {shop_right && (
-            <aside className="col-xl-3 col-lg-4 d-none d-lg-block"></aside>
-          )}
+          {shop_right && <aside className="col-xl-3 col-lg-4 d-none d-lg-block"></aside>}
         </div>
       </div>
 
       <style jsx>{`
         .shop-empty {
-          min-height: 40vh;
-          display: flex;
-          align-items: center;
-          justify-content: center;
+          /* viewport height minus header + toolbar, measured in JS */
+          min-height: calc(100vh - var(--page-offset, 140px));
+          display: grid;
+          place-items: center; /* perfectly center */
+          padding: 8px 0;
         }
       `}</style>
     </section>

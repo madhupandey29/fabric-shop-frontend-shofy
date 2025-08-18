@@ -1,9 +1,11 @@
 'use client';
-import React, { useEffect, useState, useId } from 'react';
+
+import React, { useEffect, useState, useId, useMemo } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useDispatch } from 'react-redux';
+
 import { Cart, QuickView, Wishlist } from '@/svg';
 import { handleProductModal } from '@/redux/features/productModalSlice';
 import { add_cart_product } from '@/redux/features/cartSlice';
@@ -26,9 +28,15 @@ const ProductItem = ({ product }) => {
 
   const handleAddProduct = (prd) => dispatch(add_cart_product(prd));
   const handleWishlistProduct = (prd) => dispatch(add_to_wishlist(prd));
-  const handleModal = (prd) => dispatch(handleProductModal(prd));
 
-  /* ---------------- image helpers (shared-safe) ---------------- */
+  const openQuickView = (prd, e) => {
+    e?.preventDefault?.();
+    e?.stopPropagation?.();
+    // send a fresh reference so Redux/React always detect a change
+    dispatch(handleProductModal({ ...prd }));
+  };
+
+  /* ---------------- image helpers ---------------- */
   const valueToUrlString = (v) => {
     if (!v) return '';
     if (typeof v === 'string') return v.trim();
@@ -38,34 +46,36 @@ const ProductItem = ({ product }) => {
   };
   const isHttpUrl = (s) => /^https?:\/\//i.test(s);
 
-  const getImageUrl = () => {
+  const imageUrl = useMemo(() => {
     const raw =
       valueToUrlString(product?.image) ||
       valueToUrlString(product?.image1) ||
       valueToUrlString(product?.image2);
 
     if (!raw) return '/assets/img/product/default-product-img.jpg';
-    if (isHttpUrl(raw)) return raw; // Cloudinary / any absolute URL
+    if (isHttpUrl(raw)) return raw;
 
-    // Local upload → prefix once
     const base = (process.env.NEXT_PUBLIC_API_BASE_URL || '').replace(/\/$/, '');
     const clean = (p) =>
       (p || '')
         .replace(/^\/+/, '')
         .replace(/^api\/uploads\/?/, '')
         .replace(/^uploads\/?/, '');
-    const prefix = 'uploads'; // change to 'api/uploads' if your route is that
+    const prefix = 'uploads';
     return `${base}/${prefix}/${clean(raw)}`;
-  };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [product]);
 
-  const imageUrl = getImageUrl();
-  const slug = product.slug;
+  const slug = product?.slug;
 
   const groupcodeId = product?.groupcode?._id || product?.groupcode || null;
   const { data: groupItems = [], isFetching, isError } =
     useGetProductsByGroupcodeQuery(groupcodeId, { skip: !groupcodeId });
   const optionCount = Array.isArray(groupItems) ? groupItems.length : 0;
   const showOptionsBadge = !!groupcodeId && !isFetching && !isError && optionCount > 1;
+
+  const formatINR = (n) =>
+    new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(Number(n || 0));
 
   return (
     <div
@@ -81,6 +91,7 @@ const ProductItem = ({ product }) => {
             aria-label={product?.name || 'View product'}
             className="image-link"
             onClick={(e) => {
+              // on touch devices: first tap reveals actions; second tap navigates
               if (!supportsHover && !showActions) {
                 e.preventDefault();
                 setShowActions(true);
@@ -90,12 +101,12 @@ const ProductItem = ({ product }) => {
             <div className="image-wrapper">
               <Image
                 src={imageUrl}
-                alt={product.name || 'product image'}
+                alt={product?.name || 'product image'}
                 fill
                 sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 320px"
                 style={{ objectFit: 'cover' }}
               />
-              <div className="image-overlay"></div>
+              <div className="image-overlay" />
             </div>
           </Link>
 
@@ -104,9 +115,9 @@ const ProductItem = ({ product }) => {
               type="button"
               className="premium-badge"
               onClick={() => router.push(`/fabric/${slug}`)}
-              aria-label={`${optionCount} options`}
+              aria-label={`${optionCount} options for ${product?.name || 'this product'}`}
             >
-              <div className="badge-background"></div>
+              <div className="badge-background" />
               <div className="badge-content">
                 <div className="icon-container" aria-hidden="true">
                   <svg className="badge-icon" viewBox="0 0 24 24">
@@ -151,16 +162,33 @@ const ProductItem = ({ product }) => {
           )}
 
           <div className="product-actions">
-            <button type="button" onClick={() => handleAddProduct(product)}
-              className="action-button" aria-label="Add to cart" title="Add to cart">
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); handleAddProduct(product); }}
+              className="action-button"
+              aria-label="Add to cart"
+              title="Add to cart"
+            >
               <Cart />
             </button>
-            <button type="button" onClick={() => handleWishlistProduct(product)}
-              className="action-button" aria-label="Add to wishlist" title="Add to wishlist">
+
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); handleWishlistProduct(product); }}
+              className="action-button"
+              aria-label="Add to wishlist"
+              title="Add to wishlist"
+            >
               <Wishlist />
             </button>
-            <button type="button" onClick={() => handleModal(product)}
-              className="action-button" aria-label="Quick view" title="Quick view">
+
+            <button
+              type="button"
+              onClick={(e) => openQuickView(product, e)}
+              className="action-button"
+              aria-label="Quick view"
+              title="Quick view"
+            >
               <QuickView />
             </button>
           </div>
@@ -168,83 +196,65 @@ const ProductItem = ({ product }) => {
 
         <div className="product-info">
           <div className="product-category">{product?.category?.name || '—'}</div>
+
           <h3 className="product-title">
             <Link href={`/fabric/${slug}`}>
-              <span dangerouslySetInnerHTML={{ __html: product.name }} />
+              <span dangerouslySetInnerHTML={{ __html: product?.name || '' }} />
             </Link>
           </h3>
+
           <div className="price-wrapper">
             <span className="current-price">
-              ₹{(product.salesPrice ?? product.price ?? 0).toFixed(2)}
+              {formatINR(product?.salesPrice ?? product?.price ?? 0)}
             </span>
-            {product.oldPrice && (
-              <span className="original-price">₹{Number(product.oldPrice).toFixed(2)}</span>
+            {product?.oldPrice && (
+              <span className="original-price">{formatINR(product?.oldPrice)}</span>
             )}
           </div>
         </div>
       </div>
 
+      {/* keep your existing styles */}
       <style jsx>{`
-        .fashion-product-card {
-          --primary: #111827;
-          --accent: #7c3aed;
-          --card-bg: #fff;
-          --card-border: rgba(17, 24, 39, 0.12);
-          --inner-border: rgba(17, 24, 39, 0.08);
-          --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
-          --shadow-xl: 0 20px 25px rgba(0,0,0,.10), 0 10px 10px rgba(0,0,0,.04);
-          position: relative; width: 100%; height: 100%;
-          transition: transform .3s ease-out, box-shadow .3s ease-out;
-          will-change: transform;
-        }
-        .fashion-product-card:hover { transform: translateY(-4px); }
-        .card-wrapper {
-          position: relative; width: 100%; height: 100%; background: var(--card-bg);
-          border: 3px solid var(--card-border); border-radius: 14px; overflow: hidden;
-          box-shadow: var(--shadow-sm); transition: box-shadow .3s ease;
-        }
-        .fashion-product-card:hover .card-wrapper,
-        .fashion-product-card:focus-within .card-wrapper { box-shadow: var(--shadow-xl); }
-        .product-image-container { position: relative; aspect-ratio: 3 / 4; min-height: 220px; overflow: hidden; }
-        .image-link { display: block; height: 100%; }
-        .image-wrapper { position: relative; width: 100%; height: 100%; transition: transform .6s cubic-bezier(.22,1,.36,1); will-change: transform; }
-        .fashion-product-card:hover .image-wrapper { transform: scale(1.04); }
-        .image-overlay { position: absolute; inset: 0; background: linear-gradient(to top, rgba(0,0,0,.16) 0%, transparent 40%); z-index: 1; pointer-events: none; }
-        .premium-badge { position: absolute; left: 14px; bottom: 14px; display: inline-flex; align-items: center; padding: 0; border-radius: 24px; overflow: hidden; z-index: 2; cursor: pointer; border: 0; background: transparent; box-shadow: 0 4px 16px rgba(0,0,0,.10); transition: transform .25s ease, box-shadow .25s ease; }
-        .premium-badge:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-        .premium-badge:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(0,0,0,.14); }
-        .badge-background { position: absolute; inset: 0; background: linear-gradient(135deg, rgba(255,255,255,.95), rgba(255,255,255,.85)); backdrop-filter: blur(8px); z-index: 1; }
-        .badge-content { position: relative; z-index: 2; display: inline-flex; gap: 8px; padding: 8px 14px 8px 10px; }
-        .badge-text { font-size: 13px; font-weight: 600; color: #111827; letter-spacing: .02em; }
-        .icon-container { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; background: #fff; border: 1px solid rgba(0,0,0,.06); box-shadow: 0 2px 8px rgba(0,0,0,.12); }
-        .badge-icon { width: 22px; height: 22px; display: block; filter: drop-shadow(0 1px 2px rgba(0,0,0,.15)); transition: transform .35s ease; }
-        .petal-group { transform-origin: 12px 12px; }
-        .premium-badge:hover .badge-icon { transform: rotate(8deg) scale(1.03); }
-        @media (prefers-reduced-motion: reduce) { .badge-icon { transition: none; }
-        }
-        .product-actions { position: absolute; top: 14px; right: 14px; display: flex; flex-direction: column; gap: 10px; opacity: 0; transform: translateY(-8px); transition: opacity .25s ease, transform .25s ease; z-index: 2; }
-        @media (hover: hover) and (pointer: fine) {
-          .fashion-product-card:hover .product-actions,
-          .fashion-product-card:focus-within .product-actions { opacity: 1; transform: translateY(0); }
-        }
-        .fashion-product-card.show-actions .product-actions { opacity: 1; transform: translateY(0); }
-        .action-button { width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; background: rgba(255,255,255,.95); backdrop-filter: blur(4px); border: 1px solid rgba(0,0,0,.06); box-shadow: 0 4px 12px rgba(0,0,0,.08); transition: transform .2s ease, box-shadow .2s ease, background .2s ease; }
-        .action-button:hover { background: #fff; transform: scale(1.08); box-shadow: 0 6px 16px rgba(0,0,0,.12); }
-        .action-button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-        .action-button :global(svg) { width: 16px; height: 16px; color: var(--primary); transition: color .2s ease; }
-        .action-button:hover :global(svg) { color: var(--accent); }
-        .product-info { padding: clamp(14px, 2.2vw, 18px); position: relative; z-index: 1; border-top: 1px solid var(--inner-border); background: #fff; }
-        .product-category { font-size: 11px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; color: var(--accent); margin-bottom: 8px; }
-        .product-title { font-size: clamp(14px, 2.2vw, 16px); font-weight: 600; line-height: 1.5; color: var(--primary); margin: 0 0 10px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-        .product-title :global(a){ color: inherit; text-decoration: none; }
-        .product-title :global(a:hover){ color: var(--accent); }
-        .price-wrapper { display: flex; align-items: center; gap: 8px; }
-        .current-price { font-size: clamp(15px, 2.2vw, 16px); font-weight: 700; color: var(--primary); }
-        .original-price { font-size: 14px; color: #9ca3af; text-decoration: line-through; }
-        @media (max-width: 992px) { .product-actions { gap: 8px; } .action-button { width: 34px; height: 34px; } }
-        @media (max-width: 768px) { .product-image-container { min-height: 200px; } .action-button { width: 32px; height: 32px; } }
-        @media (max-width: 480px) { .product-image-container { min-height: 180px; } .action-button { width: 30px; height: 30px; } }
-        @media (prefers-reduced-motion: reduce) { .fashion-product-card, .image-wrapper { transition: none; } }
+        .fashion-product-card{--primary:#111827;--accent:#7c3aed;--card-bg:#fff;--card-border:rgba(17,24,39,.12);--inner-border:rgba(17,24,39,.08);--shadow-sm:0 1px 2px rgba(0,0,0,.04);--shadow-xl:0 20px 25px rgba(0,0,0,.10),0 10px 10px rgba(0,0,0,.04);position:relative;width:100%;height:100%;transition:transform .3s ease-out,box-shadow .3s ease-out;will-change:transform}
+        .fashion-product-card:hover{transform:translateY(-4px)}
+        .card-wrapper{position:relative;width:100%;height:100%;background:var(--card-bg);border:3px solid var(--card-border);border-radius:14px;overflow:hidden;box-shadow:var(--shadow-sm);transition:box-shadow .3s ease}
+        .fashion-product-card:hover .card-wrapper,.fashion-product-card:focus-within .card-wrapper{box-shadow:var(--shadow-xl)}
+        .product-image-container{position:relative;aspect-ratio:3/4;min-height:220px;overflow:hidden}
+        .image-link{display:block;height:100%}
+        .image-wrapper{position:relative;width:100%;height:100%;transition:transform .6s cubic-bezier(.22,1,.36,1);will-change:transform}
+        .fashion-product-card:hover .image-wrapper{transform:scale(1.04)}
+        .image-overlay{position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,.16) 0%,transparent 40%);z-index:1;pointer-events:none}
+        .premium-badge{position:absolute;left:14px;bottom:14px;display:inline-flex;align-items:center;padding:0;border-radius:24px;overflow:hidden;z-index:2;cursor:pointer;border:0;background:transparent;box-shadow:0 4px 16px rgba(0,0,0,.10);transition:transform .25s ease,box-shadow .25s ease}
+        .premium-badge:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+        .premium-badge:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(0,0,0,.14)}
+        .badge-background{position:absolute;inset:0;background:linear-gradient(135deg,rgba(255,255,255,.95),rgba(255,255,255,.85));backdrop-filter:blur(8px);z-index:1}
+        .badge-content{position:relative;z-index:2;display:inline-flex;gap:8px;padding:8px 14px 8px 10px}
+        .badge-text{font-size:13px;font-weight:600;color:#111827;letter-spacing:.02em}
+        .icon-container{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;background:#fff;border:1px solid rgba(0,0,0,.06);box-shadow:0 2px 8px rgba(0,0,0,.12)}
+        .badge-icon{width:22px;height:22px;display:block;filter:drop-shadow(0 1px 2px rgba(0,0,0,.15));transition:transform .35s ease}
+        .petal-group{transform-origin:12px 12px}
+        .premium-badge:hover .badge-icon{transform:rotate(8deg) scale(1.03)}
+        .product-actions{position:absolute;top:14px;right:14px;display:flex;flex-direction:column;gap:10px;opacity:0;transform:translateY(-8px);transition:opacity .25s ease,transform .25s ease;z-index:2}
+        @media (hover:hover) and (pointer:fine){.fashion-product-card:hover .product-actions,.fashion-product-card:focus-within .product-actions{opacity:1;transform:translateY(0)}}
+        .fashion-product-card.show-actions .product-actions{opacity:1;transform:translateY(0)}
+        .action-button{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;background:rgba(255,255,255,.95);backdrop-filter:blur(4px);border:1px solid rgba(0,0,0,.06);box-shadow:0 4px 12px rgba(0,0,0,.08);transition:transform .2s ease,box-shadow .2s ease,background .2s ease}
+        .action-button:hover{background:#fff;transform:scale(1.08);box-shadow:0 6px 16px rgba(0,0,0,.12)}
+        .action-button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+        .action-button :global(svg){width:16px;height:16px;color:var(--primary);transition:color .2s ease}
+        .action-button:hover :global(svg){color:var(--accent)}
+        .product-info{padding:clamp(14px,2.2vw,18px);position:relative;z-index:1;border-top:1px solid var(--inner-border);background:#fff}
+        .product-category{font-size:11px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--accent);margin-bottom:8px}
+        .product-title{font-size:clamp(14px,2.2vw,16px);font-weight:600;line-height:1.5;color:var(--primary);margin:0 0 10px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+        .product-title :global(a){color:inherit;text-decoration:none}
+        .product-title :global(a:hover){color:var(--accent)}
+        .price-wrapper{display:flex;align-items:center;gap:8px}
+        .current-price{font-size:clamp(15px,2.2vw,16px);font-weight:700;color:var(--primary)}
+        .original-price{font-size:14px;color:#9ca3af;text-decoration:line-through}
+        @media (max-width:992px){.product-actions{gap:8px}.action-button{width:34px;height:34px}}
+        @media (max-width:768px){.product-image-container{min-height:200px}.action-button{width:32px;height:32px}}
+        @media (max-width:480px){.product-image-container{min-height:180px}.action-button{width:30px;height:30px}}
+        @media (prefers-reduced-motion:reduce){.fashion-product-card,.image-wrapper{transition:none}}
       `}</style>
     </div>
   );
