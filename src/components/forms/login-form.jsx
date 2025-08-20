@@ -1,4 +1,3 @@
-// components/forms/login-form.jsx
 'use client';
 
 import React, { useState } from 'react';
@@ -6,7 +5,7 @@ import Cookies from 'js-cookie';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as Yup from 'yup';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import ErrorMsg from '../common/error-msg';
 import { notifyError, notifySuccess } from '@/utils/toast';
 
@@ -21,11 +20,17 @@ const otpRequestSchema = Yup.object().shape({
 
 export default function LoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirect = searchParams.get('redirect') || '/profile';
 
   // modes: 'password' | 'otpRequest' | 'otpVerify'
   const [mode,       setMode]       = useState('password');
   const [savedEmail, setSavedEmail] = useState('');
   const [otp,        setOtp]        = useState('');
+
+  // ✅ missing pieces for ESLint errors
+  const [loading, setLoading] = useState(false);
+  const [error,   setError]   = useState('');
 
   // password form
   const {
@@ -61,7 +66,7 @@ export default function LoginForm() {
       Cookies.set('userInfo', JSON.stringify({ user: json.user }), { expires: 0.5 });
       notifySuccess(json.message);
       resetPass();
-      router.push('/profile');
+      router.push(redirect);
     } catch(err) {
       notifyError(err.message);
     }
@@ -90,6 +95,9 @@ export default function LoginForm() {
   // 3️⃣ Verify OTP & login
   const handleOtpVerify = async (e) => {
     e.preventDefault();
+    setLoading(true);
+    setError('');
+
     try {
       const res = await fetch(`${API}/users/login/otp/verify`, {
         method:'POST', credentials:'include',
@@ -102,9 +110,16 @@ export default function LoginForm() {
       Cookies.set('userInfo', JSON.stringify({ user: json.user }), { expires: 0.5 });
       notifySuccess('Logged in successfully');
       setOtp('');
-      router.push('/profile');
+      if (redirect) {
+        window.location.href = redirect;
+      } else {
+        router.push('/');
+      }
     } catch(err) {
-      notifyError(err.message);
+      console.error('Login error:', err);
+      setError(err?.message || 'Login failed. Please try again.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -114,14 +129,14 @@ export default function LoginForm() {
       {mode === 'password' && (
         <form onSubmit={onPassSubmit(handlePasswordLogin)} className="space-y-4">
 
-           <div className="tp-login-input-box">
+          <div className="tp-login-input-box">
             <div className="tp-login-input">
               <input {...regPass('email')} type="email" placeholder="Your Email" />
             </div>
             <div className="tp-login-input-title"><label>Email</label></div>
             <ErrorMsg msg={passErr.email?.message}/>
           </div>
-          
+
           <div className="tp-login-input-box">
             <div className="tp-login-input">
               <input {...regPass('password')} type="password" placeholder="Your Password" />
@@ -160,15 +175,14 @@ export default function LoginForm() {
       {/* ───────── OTP Request ────────────────────── */}
       {mode === 'otpRequest' && (
         <form onSubmit={onOtpReqSubmit(handleOtpRequest)} className="space-y-4 mb-6">
-
-           <div className="tp-login-input-box">
+          <div className="tp-login-input-box">
             <div className="tp-login-input">
               <input {...regOtp('email')} type="email" placeholder="Your Email" />
             </div>
             <div className="tp-login-input-title"><label>Email</label></div>
             <ErrorMsg msg={otpErrReq.email?.message}/>
           </div>
-          
+
           <div className="tp-login-bottom">
             <button type="submit" className="tp-login-btn w-100">Get OTP</button>
           </div>
@@ -189,9 +203,19 @@ export default function LoginForm() {
             </div>
             <div className="tp-login-input-title"><label>OTP</label></div>
           </div>
+
+          {error ? <ErrorMsg msg={error} /> : null}
+
           <div className="tp-login-bottom">
-            <button type="submit" className="tp-login-btn w-100">Verify OTP</button>
+            <button
+              type="submit"
+              disabled={loading}
+              className="tp-login-btn w-100"
+            >
+              {loading ? 'Verifying…' : 'Verify OTP'}
+            </button>
           </div>
+
           <div className="text-center">
             <button
               onClick={() => setMode('password')}

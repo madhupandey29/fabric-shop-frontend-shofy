@@ -1,10 +1,9 @@
-
 import Wrapper       from '@/layout/wrapper';
 import HeaderTwo     from '@/layout/headers/header-2';
 import Footer        from '@/layout/footers/footer';
 import ProductClient from './ProductDetailsClient';
 
-export const revalidate = 600;                
+export const revalidate = 600;
 
 function apiHeaders() {
   return {
@@ -14,33 +13,29 @@ function apiHeaders() {
   };
 }
 
-
 const firstNonEmpty = (...v) => v.find(x => x != null && x !== '');
 
 export async function generateMetadata({ params }) {
- 
-  const slug = params.slug;
+  // ✅ Next.js 15: params is async
+  const { slug } = await params;
 
-  
   const res = await fetch(
     `${process.env.NEXT_PUBLIC_API_BASE_URL}/product/slug/${slug}`,
     { headers: apiHeaders(), next: { revalidate } }
   );
 
-  if (!res.ok) return { title: 'Product not found', description: '' };
+  if (!res.ok) {
+    return { title: 'Product not found', description: '' };
+  }
 
   const payload = await res.json();
-  const product = Array.isArray(payload.data)
-    ? payload.data[0]
-    : payload.data;
+  const product = Array.isArray(payload.data) ? payload.data[0] : payload.data;
 
+  const siteURL   = process.env.NEXT_PUBLIC_SITE_URL || '';
+  const canonical = `${siteURL}/fabric/${slug}`;
 
-
-  const siteURL     = process.env.NEXT_PUBLIC_SITE_URL || '';
-  const canonical   = `${siteURL}/fabric/${slug}`;
-
-  const title       = firstNonEmpty(
-    product.seoTitle,            
+  const title = firstNonEmpty(
+    product.seoTitle,
     product.name,
     product.title,
     slug.replace(/[-_]/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
@@ -52,7 +47,7 @@ export async function generateMetadata({ params }) {
     ''
   );
 
-  const image       = firstNonEmpty(
+  const image = firstNonEmpty(
     product.seoImage,
     product.img,
     product.image1,
@@ -69,38 +64,37 @@ export async function generateMetadata({ params }) {
     title,
     description,
     keywords,
-
     alternates: { canonical },
-
     openGraph: {
-      type:  'website',
-      url:   canonical,
+      type: 'website',
+      url: canonical,
       title,
       description,
       images: image ? [{ url: image }] : [],
       locale: 'en_US',
       siteName: 'AGE Fabrics',
     },
-
     twitter: {
-      card:  'summary_large_image',
+      card: 'summary_large_image',
       title,
       description,
       images: image ? [image] : undefined,
     },
-
     other: {
-      robots:        'index,follow',
+      robots: 'index,follow',
       'theme-color': '#ffffff',
     },
   };
 }
 
 export default async function Page({ params }) {
+  // ✅ Next.js 15: params is async
+  const { slug } = await params;
+
   return (
     <Wrapper>
       <HeaderTwo style_2 />
-      <ProductClient slug={params.slug} />
+      <ProductClient slug={slug} />
       <Footer primary_style />
     </Wrapper>
   );

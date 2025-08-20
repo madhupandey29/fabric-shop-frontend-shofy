@@ -5,17 +5,19 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useDispatch } from 'react-redux';
+import { useAuthAction, formatProductForCart, formatProductForWishlist } from '@/utils/authUtils';
+import { add_to_wishlist } from '@/redux/features/wishlist-slice';
+import { add_cart_product } from '@/redux/features/cartSlice';
 
 import { Cart, QuickView, Wishlist } from '@/svg';
 import { handleProductModal } from '@/redux/features/productModalSlice';
-import { add_cart_product } from '@/redux/features/cartSlice';
-import { add_to_wishlist } from '@/redux/features/wishlist-slice';
 import { useGetProductsByGroupcodeQuery } from '@/redux/features/productApi';
 
 const ProductItem = ({ product }) => {
-  const dispatch = useDispatch();
   const router = useRouter();
   const rainbowId = useId();
+  const dispatch = useDispatch();
+  const { requireAuth } = useAuthAction();
 
   const [showActions, setShowActions] = useState(false);
   const [supportsHover, setSupportsHover] = useState(true);
@@ -26,8 +28,49 @@ const ProductItem = ({ product }) => {
     }
   }, []);
 
-  const handleAddProduct = (prd) => dispatch(add_cart_product(prd));
-  const handleWishlistProduct = (prd) => dispatch(add_to_wishlist(prd));
+  const handleAddProduct = async (prd, e) => {
+    e?.stopPropagation?.();
+    e?.preventDefault?.();
+    
+    try {
+      console.log('Attempting to add to cart:', prd);
+      
+      // This will handle the auth check and redirect if needed
+      await requireAuth(async () => {
+        const productToAdd = formatProductForCart(prd);
+        console.log('Dispatching add_cart_product with:', productToAdd);
+        dispatch(add_cart_product(productToAdd));
+        console.log('Successfully added to cart');
+      })();
+      
+      return true;
+    } catch (error) {
+      console.error('Error in handleAddProduct:', error);
+      return false;
+    }
+  };
+
+  const handleWishlistProduct = async (prd, e) => {
+    e?.stopPropagation?.();
+    e?.preventDefault?.();
+    
+    try {
+      console.log('Attempting to update wishlist:', prd);
+      
+      // This will handle the auth check and redirect if needed
+      await requireAuth(async () => {
+        const productToAdd = formatProductForWishlist(prd);
+        console.log('Dispatching add_to_wishlist with:', productToAdd);
+        dispatch(add_to_wishlist(productToAdd));
+        console.log('Successfully updated wishlist');
+      })();
+      
+      return true;
+    } catch (error) {
+      console.error('Error in handleWishlistProduct:', error);
+      return false;
+    }
+  };
 
   const openQuickView = (prd, e) => {
     e?.preventDefault?.();
@@ -164,7 +207,7 @@ const ProductItem = ({ product }) => {
           <div className="product-actions">
             <button
               type="button"
-              onClick={(e) => { e.stopPropagation(); handleAddProduct(product); }}
+              onClick={(e) => handleAddProduct(product, e)}
               className="action-button"
               aria-label="Add to cart"
               title="Add to cart"
@@ -174,7 +217,7 @@ const ProductItem = ({ product }) => {
 
             <button
               type="button"
-              onClick={(e) => { e.stopPropagation(); handleWishlistProduct(product); }}
+              onClick={(e) => handleWishlistProduct(product, e)}
               className="action-button"
               aria-label="Add to wishlist"
               title="Add to wishlist"
