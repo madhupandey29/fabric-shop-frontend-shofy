@@ -65,7 +65,7 @@ const DetailsWrapper = ({ productItem = {} }) => {
   } = productItem;
 
   // 🔹 Get SKU from SEO (with fallbacks)
-  const { data: seoResp } = useGetSeoByProductQuery(_id, { skip: !_id });
+  /* const { data: seoResp } = useGetSeoByProductQuery(_id, { skip: !_id });
   const seoDoc  = Array.isArray(seoResp?.data) ? seoResp?.data?.[0] : (seoResp?.data || seoResp);
   const seoSku  = pick(
     seoDoc?.identifier,
@@ -75,7 +75,7 @@ const DetailsWrapper = ({ productItem = {} }) => {
     seoDoc?.code
   );
   const skuValue = pick(seoSku);
-
+ */
   const dispatch = useDispatch();
   const { wishlist } = useSelector(state => state.wishlist);
   const isInWishlist = wishlist.some(prd => prd._id === _id);
@@ -102,11 +102,11 @@ const DetailsWrapper = ({ productItem = {} }) => {
       <p dangerouslySetInnerHTML={{ __html: description }} />
 
       <div className="tp-product-details-query" style={{ marginBottom: 20 }}>
-        {skuValue && (
+       {/*  {skuValue && (
           <div className="tp-product-details-query-item d-flex align-items-center">
             <span>SKU: </span><p>{skuValue}</p>
           </div>
-        )}
+        )} */}
 
         <StructureInfo id={structureId} />
         <ContentInfo   id={contentId}   />
