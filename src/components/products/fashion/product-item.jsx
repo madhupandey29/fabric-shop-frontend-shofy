@@ -12,6 +12,14 @@ import { add_cart_product } from '@/redux/features/cartSlice';
 import { Cart, QuickView, Wishlist } from '@/svg';
 import { handleProductModal } from '@/redux/features/productModalSlice';
 import { useGetProductsByGroupcodeQuery } from '@/redux/features/productApi';
+import { useGetSeoByProductQuery } from '@/redux/features/seoApi';
+
+/* ───────── helpers ───────── */
+const nonEmpty = (v) => {
+  if (Array.isArray(v)) return v.length > 0;
+  return v !== undefined && v !== null && String(v).trim() !== '';
+};
+const pick = (...xs) => xs.find(nonEmpty);
 
 const ProductItem = ({ product }) => {
   const router = useRouter();
@@ -31,21 +39,13 @@ const ProductItem = ({ product }) => {
   const handleAddProduct = async (prd, e) => {
     e?.stopPropagation?.();
     e?.preventDefault?.();
-    
     try {
-      console.log('Attempting to add to cart:', prd);
-      
-      // This will handle the auth check and redirect if needed
       await requireAuth(async () => {
         const productToAdd = formatProductForCart(prd);
-        console.log('Dispatching add_cart_product with:', productToAdd);
         dispatch(add_cart_product(productToAdd));
-        console.log('Successfully added to cart');
       })();
-      
       return true;
-    } catch (error) {
-      console.error('Error in handleAddProduct:', error);
+    } catch {
       return false;
     }
   };
@@ -53,21 +53,13 @@ const ProductItem = ({ product }) => {
   const handleWishlistProduct = async (prd, e) => {
     e?.stopPropagation?.();
     e?.preventDefault?.();
-    
     try {
-      console.log('Attempting to update wishlist:', prd);
-      
-      // This will handle the auth check and redirect if needed
       await requireAuth(async () => {
         const productToAdd = formatProductForWishlist(prd);
-        console.log('Dispatching add_to_wishlist with:', productToAdd);
         dispatch(add_to_wishlist(productToAdd));
-        console.log('Successfully updated wishlist');
       })();
-      
       return true;
-    } catch (error) {
-      console.error('Error in handleWishlistProduct:', error);
+    } catch {
       return false;
     }
   };
@@ -75,7 +67,6 @@ const ProductItem = ({ product }) => {
   const openQuickView = (prd, e) => {
     e?.preventDefault?.();
     e?.stopPropagation?.();
-    // send a fresh reference so Redux/React always detect a change
     dispatch(handleProductModal({ ...prd }));
   };
 
@@ -94,7 +85,6 @@ const ProductItem = ({ product }) => {
       valueToUrlString(product?.image) ||
       valueToUrlString(product?.image1) ||
       valueToUrlString(product?.image2);
-
     if (!raw) return '/assets/img/product/default-product-img.jpg';
     if (isHttpUrl(raw)) return raw;
 
@@ -106,19 +96,60 @@ const ProductItem = ({ product }) => {
         .replace(/^uploads\/?/, '');
     const prefix = 'uploads';
     return `${base}/${prefix}/${clean(raw)}`;
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [product]);
 
-  const slug = product?.slug;
+  /* ---------------- title, slug, category ---------------- */
+  const productId = product?._id || product?.product?._id || product?.product;
 
+  // fetch SEO (for salesPrice and potential SEO title/slug)
+  const { data: seoResp } = useGetSeoByProductQuery(productId, { skip: !productId });
+  const seoDoc = Array.isArray(seoResp?.data) ? seoResp?.data?.[0] : seoResp?.data;
+
+  const titleHtml =
+    pick(
+      product?.name,
+      product?.product?.name,
+      product?.productname,
+      product?.title,
+      product?.productTitle,
+      seoDoc?.title,
+      product?.seoTitle,
+      product?.groupcode?.name
+    ) || '—';
+
+  const slug =
+    product?.slug ||
+    product?.product?.slug ||
+    seoDoc?.slug ||
+    productId;
+
+  const categoryLabel =
+    pick(
+      product?.category?.name,
+      product?.product?.category?.name,
+      product?.categoryName,
+      seoDoc?.category
+    ) || '—';
+
+  /* ---------------- options count (groupcode) ---------------- */
   const groupcodeId = product?.groupcode?._id || product?.groupcode || null;
   const { data: groupItems = [], isFetching, isError } =
     useGetProductsByGroupcodeQuery(groupcodeId, { skip: !groupcodeId });
   const optionCount = Array.isArray(groupItems) ? groupItems.length : 0;
   const showOptionsBadge = !!groupcodeId && !isFetching && !isError && optionCount > 1;
 
+  /* ---------------- price logic (SEO first) ---------------- */
   const formatINR = (n) =>
-    new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(Number(n || 0));
+    new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(Number(n));
+
+  const effectivePrice =
+    (typeof seoDoc?.salesPrice === 'number' ? seoDoc.salesPrice : undefined) ??
+    (typeof product?.salesPrice === 'number' ? product.salesPrice : undefined) ??
+    (typeof product?.price === 'number' ? product.price : undefined) ??
+    null;
+
+  const hasPrice = typeof effectivePrice === 'number' && effectivePrice > 0;
 
   return (
     <div
@@ -131,10 +162,9 @@ const ProductItem = ({ product }) => {
         <div className="product-image-container">
           <Link
             href={`/fabric/${slug}`}
-            aria-label={product?.name || 'View product'}
+            aria-label={typeof titleHtml === 'string' ? titleHtml : 'View product'}
             className="image-link"
             onClick={(e) => {
-              // on touch devices: first tap reveals actions; second tap navigates
               if (!supportsHover && !showActions) {
                 e.preventDefault();
                 setShowActions(true);
@@ -144,7 +174,7 @@ const ProductItem = ({ product }) => {
             <div className="image-wrapper">
               <Image
                 src={imageUrl}
-                alt={product?.name || 'product image'}
+                alt={typeof titleHtml === 'string' ? titleHtml : 'product image'}
                 fill
                 sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 320px"
                 style={{ objectFit: 'cover' }}
@@ -158,7 +188,9 @@ const ProductItem = ({ product }) => {
               type="button"
               className="premium-badge"
               onClick={() => router.push(`/fabric/${slug}`)}
-              aria-label={`${optionCount} options for ${product?.name || 'this product'}`}
+              aria-label={`${optionCount} options for ${
+                typeof titleHtml === 'string' ? titleHtml : 'this product'
+              }`}
             >
               <div className="badge-background" />
               <div className="badge-content">
@@ -180,9 +212,7 @@ const ProductItem = ({ product }) => {
                         <stop offset="100%" stopColor="#FFB300" />
                       </radialGradient>
                     </defs>
-
-                    <circle cx="12" cy="12" r="10.2" fill="none"
-                      stroke={`url(#spectrum-${rainbowId})`} strokeWidth="1.4" opacity=".9" />
+                    <circle cx="12" cy="12" r="10.2" fill="none" stroke={`url(#spectrum-${rainbowId})`} strokeWidth="1.4" opacity=".9" />
                     <g className="petal-group">
                       {Array.from({ length: 8 }).map((_, i) => (
                         <path
@@ -194,8 +224,7 @@ const ProductItem = ({ product }) => {
                         />
                       ))}
                     </g>
-                    <circle cx="12" cy="12" r="3.8" fill={`url(#sun-${rainbowId})`}
-                      stroke="#fff" strokeOpacity=".55" strokeWidth=".5" />
+                    <circle cx="12" cy="12" r="3.8" fill={`url(#sun-${rainbowId})`} stroke="#fff" strokeOpacity=".55" strokeWidth=".5" />
                     <circle cx="10.6" cy="10.8" r=".9" fill="#fff" opacity=".9" />
                   </svg>
                 </div>
@@ -214,7 +243,6 @@ const ProductItem = ({ product }) => {
             >
               <Cart />
             </button>
-
             <button
               type="button"
               onClick={(e) => handleWishlistProduct(product, e)}
@@ -224,7 +252,6 @@ const ProductItem = ({ product }) => {
             >
               <Wishlist />
             </button>
-
             <button
               type="button"
               onClick={(e) => openQuickView(product, e)}
@@ -238,26 +265,26 @@ const ProductItem = ({ product }) => {
         </div>
 
         <div className="product-info">
-          <div className="product-category">{product?.category?.name || '—'}</div>
+          <div className="product-category">{categoryLabel}</div>
 
           <h3 className="product-title">
             <Link href={`/fabric/${slug}`}>
-              <span dangerouslySetInnerHTML={{ __html: product?.name || '' }} />
+              <span dangerouslySetInnerHTML={{ __html: titleHtml }} />
             </Link>
           </h3>
 
           <div className="price-wrapper">
             <span className="current-price">
-              {formatINR(product?.salesPrice ?? product?.price ?? 0)}
+              {hasPrice ? formatINR(effectivePrice) : '—'}
             </span>
-            {product?.oldPrice && (
-              <span className="original-price">{formatINR(product?.oldPrice)}</span>
-            )}
+            {/* show old price only if current price exists and is positive */}
+            {hasPrice && typeof product?.oldPrice === 'number' ? (
+              <span className="original-price">{formatINR(product.oldPrice)}</span>
+            ) : null}
           </div>
         </div>
       </div>
 
-      {/* keep your existing styles */}
       <style jsx>{`
         .fashion-product-card{--primary:#111827;--accent:#7c3aed;--card-bg:#fff;--card-border:rgba(17,24,39,.12);--inner-border:rgba(17,24,39,.08);--shadow-sm:0 1px 2px rgba(0,0,0,.04);--shadow-xl:0 20px 25px rgba(0,0,0,.10),0 10px 10px rgba(0,0,0,.04);position:relative;width:100%;height:100%;transition:transform .3s ease-out,box-shadow .3s ease-out;will-change:transform}
         .fashion-product-card:hover{transform:translateY(-4px)}

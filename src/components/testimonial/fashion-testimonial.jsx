@@ -22,7 +22,7 @@ const slider_setting = {
     prevEl: ".tp-testimonial-slider-button-prev",
   },
   // Enable Swiper's built-in lazy loading for images
-  lazy: true,
+  lazy: "true",
   // Enable keyboard navigation
   keyboard: {
     enabled: true,

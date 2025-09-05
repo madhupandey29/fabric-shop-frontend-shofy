@@ -49,7 +49,7 @@ const slider_setting = {
     clickable: true,
   },
   // Enable Swiper's built-in lazy loading for images
-  lazy: true,
+  lazy: "true",
   // Enable keyboard navigation
   keyboard: {
     enabled: true,

@@ -10,7 +10,7 @@ const isCloudinaryUrl = (url) => {
 
 // Helper function to process image URLs
 const processImageUrl = (url) => {
-  if (!url) return '';
+  if (!url) return null;   // ✅ return null instead of empty string
   if (isCloudinaryUrl(url)) return url;
   const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || '';
   const cleanBaseUrl = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
@@ -63,17 +63,13 @@ const DetailsThumbWrapper = ({
                   }}
                 >
                   <Image
-                    src={item.img}
+                    src={item.img || "/assets/img/product/default-product-img.jpg"}   
                     alt="video thumbnail"
                     width={80}
                     height={80}
                     style={{ width: 80, height: 80, objectFit: 'contain', borderRadius: 8 }}
                     unoptimized={isCloudinary}
                     loading="lazy"
-                    onError={(e) => {
-                      e.target.onerror = null;
-                      e.target.src = '/assets/img/product/default-product-img.jpg';
-                    }}
                   />
                   <span
                     style={{
@@ -103,17 +99,13 @@ const DetailsThumbWrapper = ({
                   type="button"
                 >
                   <Image
-                    src={item.img}
+                    src={item.img || "/assets/img/product/default-product-img.jpg"}   
                     alt="image"
                     width={80}
                     height={80}
                     style={{ width: "100%", height: "100%", objectFit: 'contain' }}
                     unoptimized={isCloudinary}
                     loading="lazy"
-                    onError={(e) => {
-                      e.target.onerror = null;
-                      e.target.src = '/assets/img/product/default-product-img.jpg';
-                    }}
                   />
                 </button>
               );
@@ -132,17 +124,13 @@ const DetailsThumbWrapper = ({
                 />
               ) : (
                 <Image
-                  src={processedActiveImg}
+                  src={processedActiveImg || "/assets/img/product/default-product-img.jpg"}   
                   alt="product img"
                   width={imgWidth}
                   height={imgHeight}
                   style={{ objectFit: 'contain' }}
                   unoptimized={isCloudinaryUrl(processedActiveImg)}
                   priority={true}
-                  onError={(e) => {
-                    e.target.onerror = null;
-                    e.target.src = '/assets/img/product/default-product-img.jpg';
-                  }}
                 />
               )}
               <div className="tp-product-badge">

@@ -25347,3 +25347,21 @@
     u+f160-f161, u+f163, u+f175-f178, u+f195, u+f1f8, u+f219, u+f250, u+f252,
     u+f27a;
 }
+/* ------------------------------------------------------------------ */
+/* FontAwesome reset (moved from inline style to avoid hydration issue) */
+/* ------------------------------------------------------------------ */
+.fa { 
+  font-family: var(--fa-style-family,'Font Awesome 6 Pro'); 
+  font-weight: var(--fa-style,900);
+}
+
+.fa, .fa-brands, .fa-light, .fa-regular, .fa-solid, .fa-thin,
+.fab, .fad, .fal, .far, .fas, .fat {
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-font-smoothing: antialiased;
+  display: var(--fa-display, inline-block);
+  font-style: normal;
+  font-variant: normal;
+  line-height: 1;
+  text-rendering: auto;
+}

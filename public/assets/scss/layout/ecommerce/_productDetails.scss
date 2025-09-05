@@ -526,7 +526,7 @@
             margin-bottom: 13px;
 
             @media #{$sm}{
-                font-size: 30px;
+                font-size: 14px;
             }
 
             @media #{$xs}{
@@ -627,7 +627,7 @@
                         font-size: 35px;
                     }
                     @media #{$sm}{
-                        font-size: 30px;
+                        font-size: 14px;
                     }
                     @media #{$xs}{
                         font-size: 25px;
@@ -741,7 +741,7 @@
                 & p{
                     margin-left: 4px;
                     font-size: 14px;
-                    margin-bottom: 0;
+                 margin-bottom: 0;
                 }
             }
         }
@@ -829,7 +829,7 @@
             }
             &-meta{
                 font-size: 14px;
-                position: relative;
+             position: relative;
                 padding-left: 11px;
                 margin-left: 3px;
 
@@ -847,7 +847,7 @@
             &-comment{
                 & p{
                     font-size: 14px;
-                    margin-bottom: 0;
+                 margin-bottom: 0;
                     line-height: 1.4;
                 }
             }
@@ -870,7 +870,7 @@
                 & p{
                     margin-bottom: 0;
                     font-size: 14px;
-                    margin-right: 8px;
+                 margin-right: 8px;
                 }
 
                 &-icon{
@@ -896,7 +896,7 @@
                 background: #FFFFFF;
                 border: 1px solid #E0E2E3;
                 font-size: 14px;
-                color: var(--tp-common-black);
+             color: var(--tp-common-black);
                 @include tp-placeholder{
                     color: #95999D;
                 }
@@ -908,7 +908,7 @@
             &-title{
                 & label{
                     font-size: 14px;
-                    color: var(--tp-common-black);
+                 color: var(--tp-common-black);
                     position: absolute;
                     top: -7px;
                     left: 20px;
@@ -1218,7 +1218,7 @@
                 }
             }
             &-title{
-                font-size: 30px;
+                font-size: 14px;
                 margin-bottom: 20px;
             }
             &-category{

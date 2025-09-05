@@ -62,8 +62,6 @@ const DetailsWrapper = ({ productItem = {} }) => {
     finishId,
     gsm,
     width,
-    groupcode,
-    slug,
   } = productItem;
 
   // 🔹 Get SKU from SEO (with fallbacks)
@@ -76,7 +74,7 @@ const DetailsWrapper = ({ productItem = {} }) => {
     seoDoc?.productCode,
     seoDoc?.code
   );
-  const skuValue = pick(seoSku, groupcode?.name, slug, _id);
+  const skuValue = pick(seoSku);
 
   const dispatch = useDispatch();
   const { wishlist } = useSelector(state => state.wishlist);
