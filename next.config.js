@@ -1,10 +1,16 @@
 /** @type {import('next').NextConfig} */
 // eslint-disable-next-line @typescript-eslint/no-var-requires
-const withBundleAnalyzer = require('@next/bundle-analyzer')({
-  enabled: process.env.ANALYZE === 'true',
+const path = require("path");
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const withBundleAnalyzer = require("@next/bundle-analyzer")({
+  enabled: process.env.ANALYZE === "true",
 });
 
 const nextConfig = {
+  reactStrictMode: true,
+  swcMinify: true,
+  output: "standalone",
+
   images: {
     remotePatterns: [
       {
@@ -35,18 +41,28 @@ const nextConfig = {
         pathname: "/**",
       },
     ],
-    
-    formats: ['image/avif', 'image/webp'],
+    formats: ["image/avif", "image/webp"],
   },
 
   async redirects() {
     return [
       {
-        source: '/home-2',
-        destination: '/',
+        source: "/home-2",
+        destination: "/",
         permanent: true,
       },
     ];
+  },
+
+  webpack: (config) => {
+    // ✅ Make @ and @assets work in imports
+    config.resolve.alias = {
+      ...(config.resolve.alias || {}),
+      "@": path.join(__dirname, "src"),
+      "@assets": path.join(__dirname, "src/assets"),
+    };
+
+    return config;
   },
 };
 
