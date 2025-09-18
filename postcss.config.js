@@ -1,11 +1,12 @@
-// postcss.config.js
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+
 module.exports = {
   plugins: {
-    "postcss-preset-env": {
-      stage: 3
-      // add any features you really need here
+    'postcss-preset-env': {
+      autoprefixer: {
+        flexbox: 'no-2009',
+      },
+      stage: 3,
     },
-    tailwindcss: {},
-    autoprefixer: {}
-  }
+  },
 };
