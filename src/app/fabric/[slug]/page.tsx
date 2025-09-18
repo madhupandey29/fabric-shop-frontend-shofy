@@ -1,5 +1,12 @@
-// app/fabric/[slug]/metadata.ts
+// app/fabric/[slug]/page.tsx
 import type { Metadata } from "next";
+import Wrapper from "@/layout/wrapper";
+import HeaderTwo from "@/layout/headers/header-2";
+import Footer from "@/layout/footers/footer";
+import ProductClient from "./ProductDetailsClient";
+
+// ✅ ISR window: 30 days (2592000 seconds)
+export const revalidate = 2_592_000;
 
 function apiHeaders() {
   return {
@@ -12,6 +19,7 @@ function apiHeaders() {
 const firstNonEmpty = (...v: Array<string | undefined | null>) =>
   v.find((x) => x != null && x !== "");
 
+/** ✅ Metadata also respects ISR (same 30d window) */
 export async function generateMetadata(
   { params }: { params: { slug: string } }
 ): Promise<Metadata> {
@@ -20,8 +28,7 @@ export async function generateMetadata(
   const apiBase = (process.env.NEXT_PUBLIC_API_BASE_URL || "").replace(/\/+$/, "");
   const res = await fetch(`${apiBase}/product/slug/${slug}`, {
     headers: apiHeaders(),
-    // ✅ also cache this fetch for 30 days
-    next: { revalidate: 2592000 },
+    next: { revalidate }, // cache metadata fetch for 30 days
   });
 
   if (!res.ok) {
@@ -80,4 +87,18 @@ export async function generateMetadata(
       "theme-color": "#ffffff",
     },
   };
+}
+
+export default async function Page(
+  { params }: { params: { slug: string } }
+) {
+  const { slug } = params;
+
+  return (
+    <Wrapper>
+      <HeaderTwo style_2 />
+      <ProductClient slug={slug} />
+      <Footer primary_style />
+    </Wrapper>
+  );
 }
