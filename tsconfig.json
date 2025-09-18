@@ -7,32 +7,17 @@
     "strict": false,
     "noEmit": true,
     "incremental": true,
-
     "module": "esnext",
-    "moduleResolution": "bundler",        // ✅ modern resolver (preferred for Next 13/14/15)
-    "esModuleInterop": true,
+    "moduleResolution": "bundler",
     "resolveJsonModule": true,
     "isolatedModules": true,
     "jsx": "preserve",
-
-    "plugins": [{ "name": "next" }],
-
     "baseUrl": ".",
-    "paths": {
-      "@/*": ["src/*"],
-      "@assets/*": ["public/assets/*"]
-    },
+    "paths": { "@/*": ["./src/*"] },
 
-    // Optional: silence the deprecation warning in TypeScript 5.x
-    "ignoreDeprecations": "6.0"
+    // ✅ must be a STRING
+    "ignoreDeprecations": "5.0"
   },
-  "include": [
-    "next-env.d.ts",
-    ".next/types/**/*.ts",
-    "**/*.ts",
-    "**/*.tsx",
-    "**/*.js",
-    "**/*.jsx"
-  ],
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx"],
   "exclude": ["node_modules"]
 }
