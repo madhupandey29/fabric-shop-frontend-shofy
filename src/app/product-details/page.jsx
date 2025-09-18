@@ -4,7 +4,7 @@ import ProductDetailsArea from "@/components/product-details/product-details-are
 import Footer from "@/layout/footers/footer";
 
 // ✅ Enable ISR: page will be cached and revalidated every 30 days
-export const revalidate = 60 * 60 * 24 * 30; // 30 days
+export const revalidate = 2592000; // 30 days
 
 export const metadata = {
   title: "Shofy - Product Details Page",

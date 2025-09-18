@@ -1,4 +1,5 @@
-// app/(auth)/login/page.tsx
+// app/(auth)/login/page.tsx  <-- adjust path to your route
+
 
 import Wrapper from "@/layout/wrapper";
 import HeaderTwo from "@/layout/headers/header-2";
@@ -6,17 +7,21 @@ import Footer from "@/layout/footers/footer";
 import CommonBreadcrumb from "@/components/breadcrumb/common-breadcrumb";
 import LoginArea from "@/components/login-register/login-area";
 
-export const dynamic = "force-static";
-export const revalidate = 0;
+/** 
+ * Force dynamic rendering (SSR) for this route.
+ * This disables static generation and ISR.
+ */
+export const dynamic = "force-dynamic";
+// (optional, redundant with force-dynamic but explicit)
+// export const revalidate = 0;
 
 export const metadata = {
   title: "Shofy - Login Page",
 };
 
 export default async function LoginPage() {
-  // (Optional but useful) ensure runtime work so Next treats it as dynamic
-  // Keep cache: "no-store" for any real data you fetch here.
-  await fetch("data:application/json,{}", { cache: "no-store" });
+  // If you ever fetch here, prefer no-store to keep SSR strict:
+  // const res = await fetch("https://api.example.com/...", { cache: "no-store" });
 
   return (
     <Wrapper>
