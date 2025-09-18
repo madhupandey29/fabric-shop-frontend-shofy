@@ -3,7 +3,7 @@ import HeaderTwo     from '@/layout/headers/header-2';
 import Footer        from '@/layout/footers/footer';
 import ProductClient from './ProductDetailsClient';
 
-export const revalidate = 600;
+export const revalidate = 2592000;
 
 function apiHeaders() {
   return {
