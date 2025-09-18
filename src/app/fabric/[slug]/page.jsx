@@ -4,10 +4,8 @@ import HeaderTwo from "@/layout/headers/header-2";
 import Footer from "@/layout/footers/footer";
 import ProductClient from "./ProductDetailsClient";
 
-// ✅ ISR window: use a static literal so the analyzer is happy
 export const revalidate = 2592000; // 30 days
 
-// Re-export the typed metadata function from a TS file
 export { generateMetadata } from "./metadata";
 
 export default async function Page({ params }) {
