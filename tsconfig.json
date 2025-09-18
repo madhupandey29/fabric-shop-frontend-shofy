@@ -21,7 +21,7 @@
         "./src/*"
       ],
       "@assets/*": [
-        "./public/assets/*"
+        "./assets/*"
       ]
     },
     // EITHER keep this as a string:

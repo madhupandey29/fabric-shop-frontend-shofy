@@ -4,6 +4,11 @@
 @import 'node_modules/react-modal-video/scss/modal-video.scss';
 @import '../../public/assets/scss/main.scss';
 
+@tailwind utilities;
+
+/* your global styles below */
+
+
 @font-face {
   font-family: 'Jost';
   src: url('/assets/fonts/Jost/Jost-VariableFont_wght.ttf') format('truetype');
